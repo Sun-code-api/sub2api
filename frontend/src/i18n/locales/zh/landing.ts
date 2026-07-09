@@ -93,6 +93,15 @@ export default {
         }
       }
     },
+    pricingPreview: {
+      title: '模型定价一览',
+      description: '透明的模型价格与分组倍率，用多少付多少',
+      model: '模型',
+      platform: '平台',
+      input: '输入 / 百万 Token',
+      output: '输出 / 百万 Token',
+      viewAll: '查看全部模型与定价'
+    },
     providers: {
       title: '已支持的 AI 模型',
       description: '一个 API，多种选择',

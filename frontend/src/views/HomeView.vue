@@ -282,6 +282,9 @@
           </div>
         </div>
 
+        <!-- Model Pricing Preview -->
+        <ModelPricingPreview />
+
         <!-- Supported Providers -->
         <div class="mb-8 text-center">
           <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
@@ -409,6 +412,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import ModelPricingPreview from '@/components/landing/ModelPricingPreview.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
 

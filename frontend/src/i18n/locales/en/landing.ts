@@ -93,6 +93,15 @@ export default {
         }
       }
     },
+    pricingPreview: {
+      title: 'Model Pricing at a Glance',
+      description: 'Transparent model prices and group rate multipliers — pay for what you use',
+      model: 'Model',
+      platform: 'Platform',
+      input: 'Input / MTok',
+      output: 'Output / MTok',
+      viewAll: 'View all models & pricing'
+    },
     providers: {
       title: 'Supported AI Models',
       description: 'One API, Multiple Choices',
