@@ -44,7 +44,8 @@ const routes: RouteRecordRaw[] = [
     name: 'ModelPlaza',
     component: () => import('@/views/user/ModelPlazaView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
+      requiresAdmin: false,
       title: 'Model Plaza',
       titleKey: 'modelPlaza.title',
       descriptionKey: 'modelPlaza.description'

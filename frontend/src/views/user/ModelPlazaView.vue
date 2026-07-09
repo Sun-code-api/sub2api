@@ -1,170 +1,247 @@
 <template>
-  <component :is="isAuthenticated ? AppLayout : 'div'">
-    <div
-      :class="
-        isAuthenticated
-          ? ''
-          : 'min-h-screen bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950'
-      "
-    >
-      <!-- 未登录时的简易页头 -->
-      <header
-        v-if="!isAuthenticated"
-        class="border-b border-gray-200/50 px-6 py-4 dark:border-dark-800/50"
+  <AppLayout>
+    <div class="space-y-6">
+      <!-- 渐变横幅 -->
+      <div
+        class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-100 via-purple-100 to-pink-100 px-6 py-8 dark:from-indigo-950/60 dark:via-purple-950/60 dark:to-pink-950/60"
       >
-        <nav class="mx-auto flex max-w-6xl items-center justify-between">
-          <router-link to="/home" class="flex items-center gap-3">
-            <div class="h-9 w-9 overflow-hidden rounded-xl shadow-md">
-              <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
-            </div>
-            <span class="text-lg font-semibold text-gray-900 dark:text-white">{{ siteName }}</span>
-          </router-link>
-          <router-link
-            to="/login"
-            class="inline-flex items-center rounded-full bg-gray-900 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            {{ t('modelPlaza.loginForMore') }}
-          </router-link>
-        </nav>
-      </header>
-
-      <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <!-- 标题（未登录时展示，登录后 AppLayout 自带页头） -->
-        <div v-if="!isAuthenticated" class="mb-6 text-center">
-          <h1 class="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
-            {{ t('modelPlaza.title') }}
-          </h1>
-          <p class="text-sm text-gray-600 dark:text-dark-400">
-            {{ t('modelPlaza.description') }}
-          </p>
-        </div>
-
-        <!-- 筛选栏 -->
-        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              v-for="p in platformTabs"
-              :key="p"
-              @click="activePlatform = p"
-              class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-              :class="
-                activePlatform === p
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'bg-white/70 text-gray-600 hover:bg-gray-100 dark:bg-dark-800/70 dark:text-dark-300 dark:hover:bg-dark-700'
-              "
-            >
-              {{ p === 'all' ? t('modelPlaza.allPlatforms') : platformLabel(p) }}
-            </button>
-          </div>
-          <div class="relative w-full sm:w-72">
-            <Icon
-              name="search"
-              size="md"
-              class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-            />
-            <input
-              v-model="searchQuery"
-              type="text"
-              :placeholder="t('modelPlaza.searchPlaceholder')"
-              class="input pl-10"
-            />
-          </div>
-        </div>
-
-        <!-- 加载中 -->
-        <div v-if="loading" class="flex items-center justify-center py-24">
-          <Icon name="refresh" size="lg" class="animate-spin text-primary-500" />
-        </div>
-
-        <!-- 空状态 -->
-        <div
-          v-else-if="filteredModels.length === 0"
-          class="py-24 text-center text-sm text-gray-500 dark:text-dark-400"
-        >
-          {{ t('modelPlaza.empty') }}
-        </div>
-
-        <!-- 模型卡片 -->
-        <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div class="flex items-center gap-4">
           <div
-            v-for="m in filteredModels"
-            :key="m.platform + '/' + m.name"
-            class="flex flex-col rounded-2xl border border-gray-200/60 bg-white/70 p-5 backdrop-blur-sm transition-shadow hover:shadow-lg hover:shadow-primary-500/10 dark:border-dark-700/60 dark:bg-dark-800/70"
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-purple-500/30"
           >
-            <!-- 名称 + 平台 -->
-            <div class="mb-3 flex items-start justify-between gap-2">
-              <h3 class="break-all text-sm font-semibold text-gray-900 dark:text-white">
-                {{ m.name }}
-              </h3>
-              <span
-                class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                :class="platformBadgeClass(m.platform)"
-              >
-                {{ platformLabel(m.platform) }}
-              </span>
-            </div>
-
-            <!-- 定价 -->
-            <div class="mb-4 space-y-1.5">
-              <template v-if="m.pricing">
-                <div
-                  v-for="row in pricingRows(m.pricing)"
-                  :key="row.label"
-                  class="flex items-baseline justify-between text-xs"
-                >
-                  <span class="text-gray-500 dark:text-dark-400">{{ row.label }}</span>
-                  <span class="font-mono font-medium text-gray-900 dark:text-white">
-                    {{ row.value }}
-                    <span class="ml-0.5 font-sans text-[10px] font-normal text-gray-400">{{
-                      row.unit
-                    }}</span>
-                  </span>
-                </div>
-              </template>
-              <div v-else class="text-xs text-gray-400 dark:text-dark-500">
-                {{ t('modelPlaza.noPricing') }}
-              </div>
-            </div>
-
-            <!-- 分组倍率 -->
-            <div class="mt-auto border-t border-gray-100 pt-3 dark:border-dark-700/60">
-              <div class="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-dark-500">
-                {{ t('modelPlaza.groups') }}
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="g in m.groups"
-                  :key="g.id"
-                  class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px]"
-                  :class="
-                    g.is_exclusive
-                      ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:ring-amber-800/50'
-                      : 'bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-dark-300'
-                  "
-                  :title="groupTooltip(g)"
-                >
-                  {{ g.name }}
-                  <span class="font-mono font-semibold" :class="userRateFor(g) !== null ? 'text-primary-600 dark:text-primary-400' : ''">
-                    ×{{ formatRate(userRateFor(g) ?? g.rate_multiplier) }}
-                  </span>
-                </span>
-              </div>
-            </div>
+            <Icon name="sparkles" size="lg" class="text-white" />
           </div>
-        </div>
-
-        <!-- 未登录提示 -->
-        <div v-if="!isAuthenticated && !loading" class="mt-10 text-center">
-          <router-link
-            to="/register"
-            class="btn btn-primary px-8 py-2.5 text-sm shadow-lg shadow-primary-500/30"
-          >
-            {{ t('modelPlaza.registerCta') }}
-          </router-link>
+          <div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+              {{ t('modelPlaza.title') }}
+            </h1>
+            <p class="mt-1 text-sm text-gray-600 dark:text-dark-300">
+              {{ t('modelPlaza.bannerDescription') }}
+            </p>
+          </div>
         </div>
       </div>
+
+      <!-- 工具栏 -->
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div class="min-w-0 flex-1">
+          <SearchInput v-model="searchQuery" :placeholder="t('modelPlaza.searchPlaceholder')" />
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="w-44">
+            <Select
+              v-model="selectedGroupId"
+              :options="groupOptions"
+              :placeholder="t('modelPlaza.allGroups')"
+            />
+          </div>
+          <div class="w-36">
+            <Select
+              v-model="selectedProvider"
+              :options="providerOptions"
+              :placeholder="t('modelPlaza.provider')"
+            />
+          </div>
+          <div class="w-32">
+            <Select
+              v-model="selectedType"
+              :options="typeOptions"
+              :placeholder="t('modelPlaza.type')"
+            />
+          </div>
+          <div class="w-36">
+            <Select v-model="sortBy" :options="sortOptions" />
+          </div>
+          <div
+            class="flex items-center overflow-hidden rounded-lg border border-gray-200 dark:border-dark-600"
+          >
+            <button
+              class="px-2.5 py-2 transition-colors"
+              :class="
+                viewMode === 'card'
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-dark-800 dark:text-dark-300 dark:hover:bg-dark-700'
+              "
+              :title="t('modelPlaza.cardView')"
+              @click="viewMode = 'card'"
+            >
+              <Icon name="grid" size="sm" />
+            </button>
+            <button
+              class="px-2.5 py-2 transition-colors"
+              :class="
+                viewMode === 'list'
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-dark-800 dark:text-dark-300 dark:hover:bg-dark-700'
+              "
+              :title="t('modelPlaza.listView')"
+              @click="viewMode = 'list'"
+            >
+              <Icon name="menu" size="sm" />
+            </button>
+          </div>
+          <span class="whitespace-nowrap text-sm text-gray-500 dark:text-dark-400">
+            {{ t('modelPlaza.modelsCount', { count: filteredModels.length }) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- 加载中 -->
+      <div v-if="loading" class="flex items-center justify-center py-24">
+        <Icon name="refresh" size="lg" class="animate-spin text-primary-500" />
+      </div>
+
+      <!-- 空状态 -->
+      <div
+        v-else-if="filteredModels.length === 0"
+        class="py-24 text-center text-sm text-gray-500 dark:text-dark-400"
+      >
+        {{ t('modelPlaza.empty') }}
+      </div>
+
+      <!-- 卡片视图 -->
+      <div v-else-if="viewMode === 'card'" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div
+          v-for="m in filteredModels"
+          :key="m.platform + '/' + m.name"
+          class="flex flex-col rounded-2xl border border-gray-200/70 bg-white p-4 transition-shadow hover:shadow-lg hover:shadow-primary-500/10 dark:border-dark-700/70 dark:bg-dark-800"
+        >
+          <!-- 提供商 + 状态 -->
+          <div class="mb-1 flex items-center justify-between">
+            <span class="text-xs text-gray-400 dark:text-dark-500">{{ m.platform }}</span>
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+            >
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              {{ t('modelPlaza.available') }}
+            </span>
+          </div>
+          <h3 class="mb-3 break-all text-sm font-semibold text-gray-900 dark:text-white">
+            {{ m.name }}
+          </h3>
+
+          <!-- 分色价格块 -->
+          <div v-if="m.pricing" class="mb-3 grid grid-cols-2 gap-2">
+            <div
+              v-for="block in priceBlocks(m.pricing)"
+              :key="block.label"
+              class="rounded-lg px-3 py-2"
+              :class="block.class"
+            >
+              <div class="text-[10px]" :class="block.labelClass">{{ block.label }}</div>
+              <div class="font-mono text-sm font-semibold text-gray-900 dark:text-white">
+                {{ block.value }}
+              </div>
+              <div class="text-[10px] text-gray-400 dark:text-dark-500">{{ block.unit }}</div>
+            </div>
+          </div>
+          <div v-else class="mb-3 text-xs text-gray-400 dark:text-dark-500">
+            {{ t('modelPlaza.noPricing') }}
+          </div>
+
+          <!-- 底部 chips：类型 + 分组倍率 -->
+          <div class="mt-auto flex flex-wrap items-center gap-1.5 border-t border-gray-100 pt-3 dark:border-dark-700/60">
+            <span
+              class="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
+            >
+              {{ typeLabel(m) }}
+            </span>
+            <span
+              v-for="g in visibleGroups(m)"
+              :key="g.id"
+              class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]"
+              :class="
+                g.is_exclusive
+                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                  : 'bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-dark-300'
+              "
+              :title="groupTooltip(g)"
+            >
+              {{ g.name }}
+              <span
+                class="font-mono font-semibold"
+                :class="userRateFor(g) !== null ? 'text-primary-600 dark:text-primary-400' : ''"
+                >{{ formatRate(userRateFor(g) ?? g.rate_multiplier) }}x</span
+              >
+            </span>
+            <button
+              v-if="m.groups.length > groupChipLimit"
+              class="rounded px-1.5 py-0.5 text-[10px] font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20"
+              @click="toggleExpand(m)"
+            >
+              {{
+                isExpanded(m)
+                  ? t('modelPlaza.collapse')
+                  : `+${m.groups.length - groupChipLimit}`
+              }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 列表视图 -->
+      <div
+        v-else
+        class="overflow-x-auto rounded-2xl border border-gray-200/70 bg-white dark:border-dark-700/70 dark:bg-dark-800"
+      >
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 text-xs text-gray-400 dark:border-dark-700 dark:text-dark-500">
+              <th class="px-4 py-3 font-medium">{{ t('modelPlaza.model') }}</th>
+              <th class="px-4 py-3 font-medium">{{ t('modelPlaza.provider') }}</th>
+              <th class="px-4 py-3 font-medium">{{ t('modelPlaza.input') }}</th>
+              <th class="px-4 py-3 font-medium">{{ t('modelPlaza.output') }}</th>
+              <th class="px-4 py-3 font-medium">{{ t('modelPlaza.cacheRead') }}</th>
+              <th class="px-4 py-3 font-medium">{{ t('modelPlaza.cacheWrite') }}</th>
+              <th class="px-4 py-3 font-medium">{{ t('modelPlaza.groups') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="m in filteredModels"
+              :key="m.platform + '/' + m.name"
+              class="border-b border-gray-50 last:border-0 dark:border-dark-700/50"
+            >
+              <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ m.name }}</td>
+              <td class="px-4 py-3 text-gray-500 dark:text-dark-400">{{ m.platform }}</td>
+              <td class="px-4 py-3 font-mono text-gray-900 dark:text-white">
+                {{ m.pricing?.input_price != null ? perMTok(m.pricing.input_price) : '—' }}
+              </td>
+              <td class="px-4 py-3 font-mono text-gray-900 dark:text-white">
+                {{ m.pricing?.output_price != null ? perMTok(m.pricing.output_price) : '—' }}
+              </td>
+              <td class="px-4 py-3 font-mono text-sky-600 dark:text-sky-400">
+                {{ m.pricing?.cache_read_price != null ? perMTok(m.pricing.cache_read_price) : '—' }}
+              </td>
+              <td class="px-4 py-3 font-mono text-pink-600 dark:text-pink-400">
+                {{ m.pricing?.cache_write_price != null ? perMTok(m.pricing.cache_write_price) : '—' }}
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="g in m.groups"
+                    :key="g.id"
+                    class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]"
+                    :class="
+                      g.is_exclusive
+                        ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                        : 'bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-dark-300'
+                    "
+                    :title="groupTooltip(g)"
+                  >
+                    {{ g.name }}
+                    <span class="font-mono font-semibold"
+                      >{{ formatRate(userRateFor(g) ?? g.rate_multiplier) }}x</span
+                    >
+                  </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </component>
+  </AppLayout>
 </template>
 
 <script setup lang="ts">
@@ -172,42 +249,101 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import SearchInput from '@/components/common/SearchInput.vue'
+import Select from '@/components/common/Select.vue'
 import modelPlazaAPI, { type ModelPlazaEntry } from '@/api/modelPlaza'
 import userGroupsAPI from '@/api/groups'
 import type { UserAvailableGroup, UserSupportedModelPricing } from '@/api/channels'
-import { useAuthStore, useAppStore } from '@/stores'
+import { useAppStore } from '@/stores'
 import { extractApiErrorMessage } from '@/utils/apiError'
-import { sanitizeUrl } from '@/utils/url'
 
 const { t } = useI18n()
-const authStore = useAuthStore()
 const appStore = useAppStore()
-
-const isAuthenticated = computed(() => authStore.isAuthenticated)
-const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
-const siteLogo = computed(() =>
-  sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', {
-    allowRelative: true,
-    allowDataUrl: true
-  })
-)
 
 const models = ref<ModelPlazaEntry[]>([])
 const userGroupRates = ref<Record<number, number>>({})
 const loading = ref(false)
-const searchQuery = ref('')
-const activePlatform = ref('all')
 
-const platformTabs = computed(() => {
+const searchQuery = ref('')
+const selectedGroupId = ref<string>('all')
+const selectedProvider = ref<string>('all')
+const selectedType = ref<string>('all')
+const sortBy = ref<string>('name')
+const viewMode = ref<'card' | 'list'>('card')
+
+const groupChipLimit = 3
+const expandedKeys = ref<Set<string>>(new Set())
+
+function modelKey(m: ModelPlazaEntry): string {
+  return m.platform + '/' + m.name
+}
+function isExpanded(m: ModelPlazaEntry): boolean {
+  return expandedKeys.value.has(modelKey(m))
+}
+function toggleExpand(m: ModelPlazaEntry) {
+  const key = modelKey(m)
+  const next = new Set(expandedKeys.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedKeys.value = next
+}
+function visibleGroups(m: ModelPlazaEntry): UserAvailableGroup[] {
+  return isExpanded(m) ? m.groups : m.groups.slice(0, groupChipLimit)
+}
+
+const groupOptions = computed(() => {
+  const byId = new Map<number, UserAvailableGroup>()
+  for (const m of models.value) {
+    for (const g of m.groups) if (!byId.has(g.id)) byId.set(g.id, g)
+  }
+  const groups = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name))
+  return [
+    { value: 'all', label: t('modelPlaza.allGroups') },
+    ...groups.map((g) => ({
+      value: String(g.id),
+      label: `${g.name} · ${formatRate(userRateFor(g) ?? g.rate_multiplier)}x · ${g.platform}`
+    }))
+  ]
+})
+
+const providerOptions = computed(() => {
   const set = new Set<string>()
   for (const m of models.value) set.add(m.platform)
-  return ['all', ...Array.from(set).sort()]
+  return [
+    { value: 'all', label: t('modelPlaza.allProviders') },
+    ...Array.from(set)
+      .sort()
+      .map((p) => ({ value: p, label: p }))
+  ]
 })
+
+const typeOptions = computed(() => [
+  { value: 'all', label: t('modelPlaza.allTypes') },
+  { value: 'chat', label: t('modelPlaza.typeChat') },
+  { value: 'per_request', label: t('modelPlaza.typePerRequest') }
+])
+
+const sortOptions = computed(() => [
+  { value: 'name', label: t('modelPlaza.sortName') },
+  { value: 'input_asc', label: t('modelPlaza.sortInputAsc') },
+  { value: 'input_desc', label: t('modelPlaza.sortInputDesc') }
+])
+
+function modelType(m: ModelPlazaEntry): 'chat' | 'per_request' {
+  return m.pricing?.billing_mode === 'per_request' ? 'per_request' : 'chat'
+}
+
+function typeLabel(m: ModelPlazaEntry): string {
+  return modelType(m) === 'per_request' ? t('modelPlaza.typePerRequest') : t('modelPlaza.typeChat')
+}
 
 const filteredModels = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  return models.value.filter((m) => {
-    if (activePlatform.value !== 'all' && m.platform !== activePlatform.value) return false
+  const groupId = selectedGroupId.value
+  const list = models.value.filter((m) => {
+    if (selectedProvider.value !== 'all' && m.platform !== selectedProvider.value) return false
+    if (selectedType.value !== 'all' && modelType(m) !== selectedType.value) return false
+    if (groupId !== 'all' && !m.groups.some((g) => String(g.id) === groupId)) return false
     if (!q) return true
     return (
       m.name.toLowerCase().includes(q) ||
@@ -215,69 +351,78 @@ const filteredModels = computed(() => {
       m.groups.some((g) => g.name.toLowerCase().includes(q))
     )
   })
+  const sorted = [...list]
+  if (sortBy.value === 'name') {
+    sorted.sort((a, b) => a.name.localeCompare(b.name))
+  } else {
+    const dir = sortBy.value === 'input_asc' ? 1 : -1
+    sorted.sort((a, b) => {
+      const pa = a.pricing?.input_price ?? Number.POSITIVE_INFINITY
+      const pb = b.pricing?.input_price ?? Number.POSITIVE_INFINITY
+      return (pa - pb) * dir
+    })
+  }
+  return sorted
 })
 
-const platformLabels: Record<string, string> = {
-  anthropic: 'Claude',
-  openai: 'OpenAI',
-  gemini: 'Gemini',
-  antigravity: 'Antigravity',
-  grok: 'Grok'
-}
-
-function platformLabel(p: string): string {
-  return platformLabels[p] || p
-}
-
-function platformBadgeClass(p: string): string {
-  switch (p) {
-    case 'anthropic':
-      return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-    case 'openai':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    case 'gemini':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-    case 'antigravity':
-      return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
-    case 'grok':
-      return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-    default:
-      return 'bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-dark-300'
-  }
-}
-
-interface PricingRow {
+interface PriceBlock {
   label: string
   value: string
   unit: string
+  class: string
+  labelClass: string
 }
 
-/** token 单价（$/token）转为 $/MTok 展示。 */
+/** token 单价（$/token）转为 $/M tokens 展示。 */
 function perMTok(price: number): string {
   const v = price * 1_000_000
   return `$${v >= 100 ? v.toFixed(0) : v.toPrecision(3)}`
 }
 
-function pricingRows(p: UserSupportedModelPricing): PricingRow[] {
-  const rows: PricingRow[] = []
+function priceBlocks(p: UserSupportedModelPricing): PriceBlock[] {
+  const blocks: PriceBlock[] = []
   const mtok = t('modelPlaza.unitPerMTok')
+  const plain = 'bg-gray-50 dark:bg-dark-700/50'
+  const plainLabel = 'text-gray-400 dark:text-dark-500'
   if (p.billing_mode === 'per_request' && p.per_request_price !== null) {
-    rows.push({
+    blocks.push({
       label: t('modelPlaza.perRequest'),
       value: `$${p.per_request_price}`,
-      unit: t('modelPlaza.unitPerRequest')
+      unit: t('modelPlaza.unitPerRequest'),
+      class: plain,
+      labelClass: plainLabel
     })
-    return rows
+    return blocks
   }
-  if (p.input_price !== null) rows.push({ label: t('modelPlaza.input'), value: perMTok(p.input_price), unit: mtok })
-  if (p.output_price !== null) rows.push({ label: t('modelPlaza.output'), value: perMTok(p.output_price), unit: mtok })
+  if (p.input_price !== null)
+    blocks.push({ label: t('modelPlaza.input'), value: perMTok(p.input_price), unit: mtok, class: plain, labelClass: plainLabel })
+  if (p.output_price !== null)
+    blocks.push({ label: t('modelPlaza.output'), value: perMTok(p.output_price), unit: mtok, class: plain, labelClass: plainLabel })
   if (p.cache_read_price !== null)
-    rows.push({ label: t('modelPlaza.cacheRead'), value: perMTok(p.cache_read_price), unit: mtok })
+    blocks.push({
+      label: t('modelPlaza.cacheRead'),
+      value: perMTok(p.cache_read_price),
+      unit: mtok,
+      class: 'bg-sky-50 dark:bg-sky-900/20',
+      labelClass: 'text-sky-500 dark:text-sky-400'
+    })
   if (p.cache_write_price !== null)
-    rows.push({ label: t('modelPlaza.cacheWrite'), value: perMTok(p.cache_write_price), unit: mtok })
+    blocks.push({
+      label: t('modelPlaza.cacheWrite'),
+      value: perMTok(p.cache_write_price),
+      unit: mtok,
+      class: 'bg-pink-50 dark:bg-pink-900/20',
+      labelClass: 'text-pink-500 dark:text-pink-400'
+    })
   if (p.image_output_price !== null)
-    rows.push({ label: t('modelPlaza.imageOutput'), value: perMTok(p.image_output_price), unit: mtok })
-  return rows
+    blocks.push({
+      label: t('modelPlaza.imageOutput'),
+      value: perMTok(p.image_output_price),
+      unit: mtok,
+      class: 'bg-violet-50 dark:bg-violet-900/20',
+      labelClass: 'text-violet-500 dark:text-violet-400'
+    })
+  return blocks
 }
 
 function userRateFor(g: UserAvailableGroup): number | null {
@@ -308,16 +453,12 @@ function groupTooltip(g: UserAvailableGroup): string {
 async function load() {
   loading.value = true
   try {
-    if (isAuthenticated.value) {
-      const [list, rates] = await Promise.all([
-        modelPlazaAPI.getModelPlaza(),
-        userGroupsAPI.getUserGroupRates().catch(() => ({}) as Record<number, number>)
-      ])
-      models.value = list
-      userGroupRates.value = rates
-    } else {
-      models.value = await modelPlazaAPI.getPublicModelPlaza()
-    }
+    const [list, rates] = await Promise.all([
+      modelPlazaAPI.getModelPlaza(),
+      userGroupsAPI.getUserGroupRates().catch(() => ({}) as Record<number, number>)
+    ])
+    models.value = list
+    userGroupRates.value = rates
   } catch (err: unknown) {
     appStore.showError(extractApiErrorMessage(err, t('common.error')))
   } finally {
@@ -325,10 +466,5 @@ async function load() {
   }
 }
 
-onMounted(() => {
-  if (!appStore.publicSettingsLoaded) {
-    appStore.fetchPublicSettings()
-  }
-  load()
-})
+onMounted(load)
 </script>

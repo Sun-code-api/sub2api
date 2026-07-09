@@ -3,8 +3,6 @@ package handler
 import (
 	"sort"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -13,14 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 模型广场：以「模型」为中心聚合所有活跃渠道的定价与分组倍率，
-// 供落地页（匿名版）与用户端模型广场页（登录版）展示。
+// 模型广场：以「模型」为中心聚合所有活跃渠道的定价与分组倍率，供用户端模型广场页展示。
 //
 // 数据完全复用 ChannelService.ListAvailable 的展示链路（含 LiteLLM 全局价格回落），
-// 不触碰真实计费逻辑。可见性与「可用渠道」页保持一致：
-//   - 匿名版仅暴露非专属（!IsExclusive）分组覆盖的模型，且受
-//     available-channels 功能开关控制（关闭时返回空列表）；
-//   - 登录版按用户可访问分组过滤，用户专属倍率由前端走 /groups/rates 合并。
+// 不触碰真实计费逻辑。可见性与「可用渠道」页保持一致：按用户可访问分组过滤，
+// 受 available-channels 功能开关控制（关闭时返回空列表），
+// 用户专属倍率由前端走 /groups/rates 合并。
 
 // modelPlazaEntry 模型广场单个模型条目。
 type modelPlazaEntry struct {
@@ -28,48 +24,6 @@ type modelPlazaEntry struct {
 	Platform string                     `json:"platform"`
 	Pricing  *userSupportedModelPricing `json:"pricing"`
 	Groups   []userAvailableGroup       `json:"groups"`
-}
-
-// plazaPublicCache 匿名版结果的进程内 TTL 缓存，避免公开端点每次请求都全量扫描
-// 渠道与分组表。登录版按用户过滤，不走缓存。
-var plazaPublicCache struct {
-	mu        sync.Mutex
-	data      []modelPlazaEntry
-	expiresAt time.Time
-}
-
-const plazaPublicCacheTTL = 60 * time.Second
-
-// ListModelPlazaPublic 匿名版模型广场。
-// GET /api/v1/public/model-plaza
-func (h *AvailableChannelHandler) ListModelPlazaPublic(c *gin.Context) {
-	if !h.featureEnabled(c) {
-		response.Success(c, []modelPlazaEntry{})
-		return
-	}
-
-	plazaPublicCache.mu.Lock()
-	if plazaPublicCache.data != nil && time.Now().Before(plazaPublicCache.expiresAt) {
-		data := plazaPublicCache.data
-		plazaPublicCache.mu.Unlock()
-		response.Success(c, data)
-		return
-	}
-	plazaPublicCache.mu.Unlock()
-
-	channels, err := h.channelService.ListAvailable(c.Request.Context())
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-	}
-	entries := buildModelPlaza(channels, nil)
-
-	plazaPublicCache.mu.Lock()
-	plazaPublicCache.data = entries
-	plazaPublicCache.expiresAt = time.Now().Add(plazaPublicCacheTTL)
-	plazaPublicCache.mu.Unlock()
-
-	response.Success(c, entries)
 }
 
 // ListModelPlaza 登录版模型广场：按当前用户可访问分组过滤。
@@ -103,9 +57,7 @@ func (h *AvailableChannelHandler) ListModelPlaza(c *gin.Context) {
 	response.Success(c, buildModelPlaza(channels, allowedGroupIDs))
 }
 
-// buildModelPlaza 把渠道视图聚合为模型为中心的条目列表。
-//
-// allowedGroupIDs 为 nil 表示匿名视角：仅保留非专属分组；否则仅保留用户可访问分组。
+// buildModelPlaza 把渠道视图聚合为模型为中心的条目列表，仅保留 allowedGroupIDs 中的分组。
 // 同名同平台模型跨渠道合并：定价取首个非空（各渠道未配置时均已回落到全局
 // LiteLLM 数据，展示上等价），分组按 ID 去重后并集。
 func buildModelPlaza(
@@ -127,11 +79,7 @@ func buildModelPlaza(
 			if g.Platform == "" {
 				continue
 			}
-			if allowedGroupIDs == nil {
-				if g.IsExclusive {
-					continue
-				}
-			} else if _, ok := allowedGroupIDs[g.ID]; !ok {
+			if _, ok := allowedGroupIDs[g.ID]; !ok {
 				continue
 			}
 			groupsByPlatform[g.Platform] = append(groupsByPlatform[g.Platform], userAvailableGroup{

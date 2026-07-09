@@ -56,8 +56,9 @@ func plazaTestChannels() []service.AvailableChannel {
 	}
 }
 
-func TestBuildModelPlaza_AnonymousHidesExclusiveGroups(t *testing.T) {
-	entries := buildModelPlaza(plazaTestChannels(), nil)
+func TestBuildModelPlaza_MergesChannelsAndDedupesGroups(t *testing.T) {
+	allowed := map[int64]struct{}{10: {}, 20: {}}
+	entries := buildModelPlaza(plazaTestChannels(), allowed)
 
 	// 停用渠道的 gemini 模型不出现
 	require.Len(t, entries, 2)
@@ -65,7 +66,7 @@ func TestBuildModelPlaza_AnonymousHidesExclusiveGroups(t *testing.T) {
 	require.Equal(t, "claude-sonnet-4-5", entries[0].Name)
 	require.Equal(t, "gpt-5", entries[1].Name)
 
-	// claude 模型：跨渠道合并，分组按 ID 去重，专属分组(11)被隐藏
+	// claude 模型：跨渠道合并，分组按 ID 去重，不可访问的分组(11)被过滤
 	claude := entries[0]
 	require.Len(t, claude.Groups, 1)
 	require.Equal(t, int64(10), claude.Groups[0].ID)
@@ -96,15 +97,4 @@ func TestModelPlaza_Unauthenticated401(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-func TestModelPlazaPublic_FeatureDisabledReturnsEmpty(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	h := &AvailableChannelHandler{} // settingService 为 nil → featureEnabled=false
 
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/public/model-plaza", nil)
-
-	h.ListModelPlazaPublic(c)
-	require.Equal(t, http.StatusOK, w.Code)
-	require.Contains(t, w.Body.String(), "[]")
-}

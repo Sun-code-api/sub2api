@@ -15,9 +15,6 @@ func RegisterUserRoutes(
 	jwtAuth middleware.JWTAuthMiddleware,
 	settingService *service.SettingService,
 ) {
-	// 模型广场（匿名版，供落地页展示；受 available-channels 开关控制）
-	v1.GET("/public/model-plaza", h.AvailableChannel.ListModelPlazaPublic)
-
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))
 	authenticated.Use(middleware.BackendModeUserGuard(settingService))
