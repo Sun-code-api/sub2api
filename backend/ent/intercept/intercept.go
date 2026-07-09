@@ -35,6 +35,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
+	"github.com/Wei-Shaw/sub2api/ent/schedulingaction"
+	"github.com/Wei-Shaw/sub2api/ent/schedulingpolicy"
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
@@ -807,6 +809,60 @@ func (f TraverseRedeemCode) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.RedeemCodeQuery", q)
 }
 
+// The SchedulingActionFunc type is an adapter to allow the use of ordinary function as a Querier.
+type SchedulingActionFunc func(context.Context, *ent.SchedulingActionQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f SchedulingActionFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.SchedulingActionQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.SchedulingActionQuery", q)
+}
+
+// The TraverseSchedulingAction type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseSchedulingAction func(context.Context, *ent.SchedulingActionQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseSchedulingAction) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseSchedulingAction) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SchedulingActionQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.SchedulingActionQuery", q)
+}
+
+// The SchedulingPolicyFunc type is an adapter to allow the use of ordinary function as a Querier.
+type SchedulingPolicyFunc func(context.Context, *ent.SchedulingPolicyQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f SchedulingPolicyFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.SchedulingPolicyQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.SchedulingPolicyQuery", q)
+}
+
+// The TraverseSchedulingPolicy type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseSchedulingPolicy func(context.Context, *ent.SchedulingPolicyQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseSchedulingPolicy) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseSchedulingPolicy) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SchedulingPolicyQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.SchedulingPolicyQuery", q)
+}
+
 // The SecuritySecretFunc type is an adapter to allow the use of ordinary function as a Querier.
 type SecuritySecretFunc func(context.Context, *ent.SecuritySecretQuery) (ent.Value, error)
 
@@ -1186,6 +1242,10 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.ProxyQuery, predicate.Proxy, proxy.OrderOption]{typ: ent.TypeProxy, tq: q}, nil
 	case *ent.RedeemCodeQuery:
 		return &query[*ent.RedeemCodeQuery, predicate.RedeemCode, redeemcode.OrderOption]{typ: ent.TypeRedeemCode, tq: q}, nil
+	case *ent.SchedulingActionQuery:
+		return &query[*ent.SchedulingActionQuery, predicate.SchedulingAction, schedulingaction.OrderOption]{typ: ent.TypeSchedulingAction, tq: q}, nil
+	case *ent.SchedulingPolicyQuery:
+		return &query[*ent.SchedulingPolicyQuery, predicate.SchedulingPolicy, schedulingpolicy.OrderOption]{typ: ent.TypeSchedulingPolicy, tq: q}, nil
 	case *ent.SecuritySecretQuery:
 		return &query[*ent.SecuritySecretQuery, predicate.SecuritySecret, securitysecret.OrderOption]{typ: ent.TypeSecuritySecret, tq: q}, nil
 	case *ent.SettingQuery:

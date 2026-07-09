@@ -659,8 +659,21 @@ var ProviderSet = wire.NewSet(
 	ProvideChannelMonitorService,
 	ProvideChannelMonitorRunner,
 	NewChannelMonitorRequestTemplateService,
+	ProvideSchedulingPolicyService,
 	ProvideUserPlatformQuotaUsageFlusher,
 )
+
+// ProvideSchedulingPolicyService 创建调度策略服务，并把策略引擎挂到渠道监控的检测结果回调上，
+// 使每次监控检测完成后自动评估策略并执行账号调度动作。
+func ProvideSchedulingPolicyService(
+	repo SchedulingPolicyRepository,
+	accountRepo AccountRepository,
+	monitorService *ChannelMonitorService,
+) *SchedulingPolicyService {
+	svc := NewSchedulingPolicyService(repo, accountRepo)
+	monitorService.SetCheckResultHook(svc.OnCheckResults)
+	return svc
+}
 
 // ProvideUserPlatformQuotaUsageFlusher 创建并启动 UserPlatformQuotaUsageFlusher。
 func ProvideUserPlatformQuotaUsageFlusher(cfg *config.Config, cache BillingCache, quotaRepo UserPlatformQuotaRepository, tw *TimingWheelService) *UserPlatformQuotaUsageFlusher {

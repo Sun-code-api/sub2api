@@ -480,6 +480,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/scheduling-policies',
+    name: 'AdminSchedulingPolicies',
+    component: () => import('@/views/admin/SchedulingPoliciesView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Scheduling Policies',
+      titleKey: 'admin.schedulingPolicies.title',
+      descriptionKey: 'admin.schedulingPolicies.description'
+    }
+  },
+  {
     path: '/monitor',
     name: 'ChannelStatus',
     component: () => import('@/views/user/ChannelStatusView.vue'),

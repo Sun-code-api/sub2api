@@ -41,6 +41,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
+	"github.com/Wei-Shaw/sub2api/ent/schedulingaction"
+	"github.com/Wei-Shaw/sub2api/ent/schedulingpolicy"
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
@@ -114,6 +116,10 @@ type Client struct {
 	Proxy *ProxyClient
 	// RedeemCode is the client for interacting with the RedeemCode builders.
 	RedeemCode *RedeemCodeClient
+	// SchedulingAction is the client for interacting with the SchedulingAction builders.
+	SchedulingAction *SchedulingActionClient
+	// SchedulingPolicy is the client for interacting with the SchedulingPolicy builders.
+	SchedulingPolicy *SchedulingPolicyClient
 	// SecuritySecret is the client for interacting with the SecuritySecret builders.
 	SecuritySecret *SecuritySecretClient
 	// Setting is the client for interacting with the Setting builders.
@@ -175,6 +181,8 @@ func (c *Client) init() {
 	c.PromoCodeUsage = NewPromoCodeUsageClient(c.config)
 	c.Proxy = NewProxyClient(c.config)
 	c.RedeemCode = NewRedeemCodeClient(c.config)
+	c.SchedulingAction = NewSchedulingActionClient(c.config)
+	c.SchedulingPolicy = NewSchedulingPolicyClient(c.config)
 	c.SecuritySecret = NewSecuritySecretClient(c.config)
 	c.Setting = NewSettingClient(c.config)
 	c.SubscriptionPlan = NewSubscriptionPlanClient(c.config)
@@ -305,6 +313,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PromoCodeUsage:                NewPromoCodeUsageClient(cfg),
 		Proxy:                         NewProxyClient(cfg),
 		RedeemCode:                    NewRedeemCodeClient(cfg),
+		SchedulingAction:              NewSchedulingActionClient(cfg),
+		SchedulingPolicy:              NewSchedulingPolicyClient(cfg),
 		SecuritySecret:                NewSecuritySecretClient(cfg),
 		Setting:                       NewSettingClient(cfg),
 		SubscriptionPlan:              NewSubscriptionPlanClient(cfg),
@@ -362,6 +372,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PromoCodeUsage:                NewPromoCodeUsageClient(cfg),
 		Proxy:                         NewProxyClient(cfg),
 		RedeemCode:                    NewRedeemCodeClient(cfg),
+		SchedulingAction:              NewSchedulingActionClient(cfg),
+		SchedulingPolicy:              NewSchedulingPolicyClient(cfg),
 		SecuritySecret:                NewSecuritySecretClient(cfg),
 		Setting:                       NewSettingClient(cfg),
 		SubscriptionPlan:              NewSubscriptionPlanClient(cfg),
@@ -410,10 +422,11 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord,
 		c.IdentityAdoptionDecision, c.PaymentAuditLog, c.PaymentOrder,
 		c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode, c.PromoCodeUsage,
-		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
-		c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog, c.User,
-		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
-		c.UserPlatformQuota, c.UserSubscription,
+		c.Proxy, c.RedeemCode, c.SchedulingAction, c.SchedulingPolicy,
+		c.SecuritySecret, c.Setting, c.SubscriptionPlan, c.TLSFingerprintProfile,
+		c.UsageCleanupTask, c.UsageLog, c.User, c.UserAllowedGroup,
+		c.UserAttributeDefinition, c.UserAttributeValue, c.UserPlatformQuota,
+		c.UserSubscription,
 	} {
 		n.Use(hooks...)
 	}
@@ -430,10 +443,11 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord,
 		c.IdentityAdoptionDecision, c.PaymentAuditLog, c.PaymentOrder,
 		c.PaymentProviderInstance, c.PendingAuthSession, c.PromoCode, c.PromoCodeUsage,
-		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
-		c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog, c.User,
-		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
-		c.UserPlatformQuota, c.UserSubscription,
+		c.Proxy, c.RedeemCode, c.SchedulingAction, c.SchedulingPolicy,
+		c.SecuritySecret, c.Setting, c.SubscriptionPlan, c.TLSFingerprintProfile,
+		c.UsageCleanupTask, c.UsageLog, c.User, c.UserAllowedGroup,
+		c.UserAttributeDefinition, c.UserAttributeValue, c.UserPlatformQuota,
+		c.UserSubscription,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -494,6 +508,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Proxy.mutate(ctx, m)
 	case *RedeemCodeMutation:
 		return c.RedeemCode.mutate(ctx, m)
+	case *SchedulingActionMutation:
+		return c.SchedulingAction.mutate(ctx, m)
+	case *SchedulingPolicyMutation:
+		return c.SchedulingPolicy.mutate(ctx, m)
 	case *SecuritySecretMutation:
 		return c.SecuritySecret.mutate(ctx, m)
 	case *SettingMutation:
@@ -4644,6 +4662,272 @@ func (c *RedeemCodeClient) mutate(ctx context.Context, m *RedeemCodeMutation) (V
 	}
 }
 
+// SchedulingActionClient is a client for the SchedulingAction schema.
+type SchedulingActionClient struct {
+	config
+}
+
+// NewSchedulingActionClient returns a client for the SchedulingAction from the given config.
+func NewSchedulingActionClient(c config) *SchedulingActionClient {
+	return &SchedulingActionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `schedulingaction.Hooks(f(g(h())))`.
+func (c *SchedulingActionClient) Use(hooks ...Hook) {
+	c.hooks.SchedulingAction = append(c.hooks.SchedulingAction, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `schedulingaction.Intercept(f(g(h())))`.
+func (c *SchedulingActionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SchedulingAction = append(c.inters.SchedulingAction, interceptors...)
+}
+
+// Create returns a builder for creating a SchedulingAction entity.
+func (c *SchedulingActionClient) Create() *SchedulingActionCreate {
+	mutation := newSchedulingActionMutation(c.config, OpCreate)
+	return &SchedulingActionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SchedulingAction entities.
+func (c *SchedulingActionClient) CreateBulk(builders ...*SchedulingActionCreate) *SchedulingActionCreateBulk {
+	return &SchedulingActionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SchedulingActionClient) MapCreateBulk(slice any, setFunc func(*SchedulingActionCreate, int)) *SchedulingActionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SchedulingActionCreateBulk{err: fmt.Errorf("calling to SchedulingActionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SchedulingActionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SchedulingActionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SchedulingAction.
+func (c *SchedulingActionClient) Update() *SchedulingActionUpdate {
+	mutation := newSchedulingActionMutation(c.config, OpUpdate)
+	return &SchedulingActionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SchedulingActionClient) UpdateOne(_m *SchedulingAction) *SchedulingActionUpdateOne {
+	mutation := newSchedulingActionMutation(c.config, OpUpdateOne, withSchedulingAction(_m))
+	return &SchedulingActionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SchedulingActionClient) UpdateOneID(id int64) *SchedulingActionUpdateOne {
+	mutation := newSchedulingActionMutation(c.config, OpUpdateOne, withSchedulingActionID(id))
+	return &SchedulingActionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SchedulingAction.
+func (c *SchedulingActionClient) Delete() *SchedulingActionDelete {
+	mutation := newSchedulingActionMutation(c.config, OpDelete)
+	return &SchedulingActionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SchedulingActionClient) DeleteOne(_m *SchedulingAction) *SchedulingActionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SchedulingActionClient) DeleteOneID(id int64) *SchedulingActionDeleteOne {
+	builder := c.Delete().Where(schedulingaction.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SchedulingActionDeleteOne{builder}
+}
+
+// Query returns a query builder for SchedulingAction.
+func (c *SchedulingActionClient) Query() *SchedulingActionQuery {
+	return &SchedulingActionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSchedulingAction},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SchedulingAction entity by its id.
+func (c *SchedulingActionClient) Get(ctx context.Context, id int64) (*SchedulingAction, error) {
+	return c.Query().Where(schedulingaction.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SchedulingActionClient) GetX(ctx context.Context, id int64) *SchedulingAction {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SchedulingActionClient) Hooks() []Hook {
+	return c.hooks.SchedulingAction
+}
+
+// Interceptors returns the client interceptors.
+func (c *SchedulingActionClient) Interceptors() []Interceptor {
+	return c.inters.SchedulingAction
+}
+
+func (c *SchedulingActionClient) mutate(ctx context.Context, m *SchedulingActionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SchedulingActionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SchedulingActionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SchedulingActionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SchedulingActionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SchedulingAction mutation op: %q", m.Op())
+	}
+}
+
+// SchedulingPolicyClient is a client for the SchedulingPolicy schema.
+type SchedulingPolicyClient struct {
+	config
+}
+
+// NewSchedulingPolicyClient returns a client for the SchedulingPolicy from the given config.
+func NewSchedulingPolicyClient(c config) *SchedulingPolicyClient {
+	return &SchedulingPolicyClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `schedulingpolicy.Hooks(f(g(h())))`.
+func (c *SchedulingPolicyClient) Use(hooks ...Hook) {
+	c.hooks.SchedulingPolicy = append(c.hooks.SchedulingPolicy, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `schedulingpolicy.Intercept(f(g(h())))`.
+func (c *SchedulingPolicyClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SchedulingPolicy = append(c.inters.SchedulingPolicy, interceptors...)
+}
+
+// Create returns a builder for creating a SchedulingPolicy entity.
+func (c *SchedulingPolicyClient) Create() *SchedulingPolicyCreate {
+	mutation := newSchedulingPolicyMutation(c.config, OpCreate)
+	return &SchedulingPolicyCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SchedulingPolicy entities.
+func (c *SchedulingPolicyClient) CreateBulk(builders ...*SchedulingPolicyCreate) *SchedulingPolicyCreateBulk {
+	return &SchedulingPolicyCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SchedulingPolicyClient) MapCreateBulk(slice any, setFunc func(*SchedulingPolicyCreate, int)) *SchedulingPolicyCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SchedulingPolicyCreateBulk{err: fmt.Errorf("calling to SchedulingPolicyClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SchedulingPolicyCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SchedulingPolicyCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SchedulingPolicy.
+func (c *SchedulingPolicyClient) Update() *SchedulingPolicyUpdate {
+	mutation := newSchedulingPolicyMutation(c.config, OpUpdate)
+	return &SchedulingPolicyUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SchedulingPolicyClient) UpdateOne(_m *SchedulingPolicy) *SchedulingPolicyUpdateOne {
+	mutation := newSchedulingPolicyMutation(c.config, OpUpdateOne, withSchedulingPolicy(_m))
+	return &SchedulingPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SchedulingPolicyClient) UpdateOneID(id int64) *SchedulingPolicyUpdateOne {
+	mutation := newSchedulingPolicyMutation(c.config, OpUpdateOne, withSchedulingPolicyID(id))
+	return &SchedulingPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SchedulingPolicy.
+func (c *SchedulingPolicyClient) Delete() *SchedulingPolicyDelete {
+	mutation := newSchedulingPolicyMutation(c.config, OpDelete)
+	return &SchedulingPolicyDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SchedulingPolicyClient) DeleteOne(_m *SchedulingPolicy) *SchedulingPolicyDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SchedulingPolicyClient) DeleteOneID(id int64) *SchedulingPolicyDeleteOne {
+	builder := c.Delete().Where(schedulingpolicy.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SchedulingPolicyDeleteOne{builder}
+}
+
+// Query returns a query builder for SchedulingPolicy.
+func (c *SchedulingPolicyClient) Query() *SchedulingPolicyQuery {
+	return &SchedulingPolicyQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSchedulingPolicy},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SchedulingPolicy entity by its id.
+func (c *SchedulingPolicyClient) Get(ctx context.Context, id int64) (*SchedulingPolicy, error) {
+	return c.Query().Where(schedulingpolicy.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SchedulingPolicyClient) GetX(ctx context.Context, id int64) *SchedulingPolicy {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SchedulingPolicyClient) Hooks() []Hook {
+	return c.hooks.SchedulingPolicy
+}
+
+// Interceptors returns the client interceptors.
+func (c *SchedulingPolicyClient) Interceptors() []Interceptor {
+	return c.inters.SchedulingPolicy
+}
+
+func (c *SchedulingPolicyClient) mutate(ctx context.Context, m *SchedulingPolicyMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SchedulingPolicyCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SchedulingPolicyUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SchedulingPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SchedulingPolicyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SchedulingPolicy mutation op: %q", m.Op())
+	}
+}
+
 // SecuritySecretClient is a client for the SecuritySecret schema.
 type SecuritySecretClient struct {
 	config
@@ -6672,9 +6956,10 @@ type (
 		ChannelMonitorRequestTemplate, ErrorPassthroughRule, Group, IdempotencyRecord,
 		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
 		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
-		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
-		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Hook
+		RedeemCode, SchedulingAction, SchedulingPolicy, SecuritySecret, Setting,
+		SubscriptionPlan, TLSFingerprintProfile, UsageCleanupTask, UsageLog, User,
+		UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
+		UserPlatformQuota, UserSubscription []ent.Hook
 	}
 	inters struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
@@ -6683,9 +6968,10 @@ type (
 		ChannelMonitorRequestTemplate, ErrorPassthroughRule, Group, IdempotencyRecord,
 		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
 		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
-		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
-		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
-		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Interceptor
+		RedeemCode, SchedulingAction, SchedulingPolicy, SecuritySecret, Setting,
+		SubscriptionPlan, TLSFingerprintProfile, UsageCleanupTask, UsageLog, User,
+		UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
+		UserPlatformQuota, UserSubscription []ent.Interceptor
 	}
 )
 

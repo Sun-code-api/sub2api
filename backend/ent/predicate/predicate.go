@@ -84,6 +84,12 @@ type Proxy func(*sql.Selector)
 // RedeemCode is the predicate function for redeemcode builders.
 type RedeemCode func(*sql.Selector)
 
+// SchedulingAction is the predicate function for schedulingaction builders.
+type SchedulingAction func(*sql.Selector)
+
+// SchedulingPolicy is the predicate function for schedulingpolicy builders.
+type SchedulingPolicy func(*sql.Selector)
+
 // SecuritySecret is the predicate function for securitysecret builders.
 type SecuritySecret func(*sql.Selector)
 
