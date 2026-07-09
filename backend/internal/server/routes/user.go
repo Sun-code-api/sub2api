@@ -15,6 +15,9 @@ func RegisterUserRoutes(
 	jwtAuth middleware.JWTAuthMiddleware,
 	settingService *service.SettingService,
 ) {
+	// 模型广场（匿名版，供落地页展示；受 available-channels 开关控制）
+	v1.GET("/public/model-plaza", h.AvailableChannel.ListModelPlazaPublic)
+
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))
 	authenticated.Use(middleware.BackendModeUserGuard(settingService))
@@ -77,6 +80,9 @@ func RegisterUserRoutes(
 		{
 			channels.GET("/available", h.AvailableChannel.List)
 		}
+
+		// 模型广场（登录版，按用户可访问分组过滤）
+		authenticated.GET("/model-plaza", h.AvailableChannel.ListModelPlaza)
 
 		// 使用记录
 		usage := authenticated.Group("/usage")
