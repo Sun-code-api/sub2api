@@ -1,88 +1,88 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
-      <!-- 渐变横幅 -->
-      <div
-        class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-100 via-purple-100 to-pink-100 px-6 py-8 dark:from-indigo-950/60 dark:via-purple-950/60 dark:to-pink-950/60"
-      >
-        <div class="flex items-center gap-4">
+    <div class="space-y-5">
+      <!-- Apple 风格 hero 横幅：柔和极光渐变 + 毛玻璃图标 + 大标题 -->
+      <div class="plaza-hero relative overflow-hidden rounded-3xl px-8 py-10">
+        <div class="plaza-hero-orb plaza-hero-orb-a" aria-hidden="true"></div>
+        <div class="plaza-hero-orb plaza-hero-orb-b" aria-hidden="true"></div>
+        <div class="relative flex items-center gap-5">
           <div
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-purple-500/30"
+            class="plaza-hero-icon flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
           >
             <Icon name="sparkles" size="lg" class="text-white" />
           </div>
-          <div>
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+          <div class="min-w-0">
+            <h1 class="plaza-hero-title text-3xl font-semibold text-gray-900 dark:text-white">
               {{ t('modelPlaza.title') }}
             </h1>
-            <p class="mt-1 text-sm text-gray-600 dark:text-dark-300">
+            <p class="mt-1.5 text-[15px] leading-relaxed text-gray-500 dark:text-dark-300">
               {{ t('modelPlaza.bannerDescription') }}
             </p>
+          </div>
+          <div class="ml-auto hidden shrink-0 sm:block">
+            <span class="plaza-count-pill">
+              {{ t('modelPlaza.modelsCount', { count: filteredModels.length }) }}
+            </span>
           </div>
         </div>
       </div>
 
-      <!-- 工具栏 -->
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div class="min-w-0 flex-1">
-          <SearchInput v-model="searchQuery" :placeholder="t('modelPlaza.searchPlaceholder')" />
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <div class="w-44">
-            <Select
-              v-model="selectedGroupId"
-              :options="groupOptions"
-              :placeholder="t('modelPlaza.allGroups')"
-            />
+      <!-- 毛玻璃工具栏 -->
+      <div class="plaza-toolbar sticky top-2 z-10 rounded-2xl p-3">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div class="min-w-0 flex-1">
+            <SearchInput v-model="searchQuery" :placeholder="t('modelPlaza.searchPlaceholder')" />
           </div>
-          <div class="w-36">
-            <Select
-              v-model="selectedProvider"
-              :options="providerOptions"
-              :placeholder="t('modelPlaza.provider')"
-            />
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="w-44">
+              <Select
+                v-model="selectedGroupId"
+                :options="groupOptions"
+                :placeholder="t('modelPlaza.allGroups')"
+              />
+            </div>
+            <div class="w-36">
+              <Select
+                v-model="selectedProvider"
+                :options="providerOptions"
+                :placeholder="t('modelPlaza.provider')"
+              />
+            </div>
+            <div class="w-32">
+              <Select
+                v-model="selectedType"
+                :options="typeOptions"
+                :placeholder="t('modelPlaza.type')"
+              />
+            </div>
+            <div class="w-36">
+              <Select v-model="sortBy" :options="sortOptions" />
+            </div>
+            <!-- iOS 分段控件 -->
+            <div class="plaza-segment relative flex items-center rounded-xl p-0.5">
+              <span
+                class="plaza-segment-thumb"
+                :class="viewMode === 'list' ? 'translate-x-full' : 'translate-x-0'"
+                aria-hidden="true"
+              ></span>
+              <button
+                class="plaza-segment-btn"
+                :class="viewMode === 'card' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-dark-400'"
+                :title="t('modelPlaza.cardView')"
+                @click="viewMode = 'card'"
+              >
+                <Icon name="grid" size="sm" />
+              </button>
+              <button
+                class="plaza-segment-btn"
+                :class="viewMode === 'list' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-dark-400'"
+                :title="t('modelPlaza.listView')"
+                @click="viewMode = 'list'"
+              >
+                <Icon name="menu" size="sm" />
+              </button>
+            </div>
           </div>
-          <div class="w-32">
-            <Select
-              v-model="selectedType"
-              :options="typeOptions"
-              :placeholder="t('modelPlaza.type')"
-            />
-          </div>
-          <div class="w-36">
-            <Select v-model="sortBy" :options="sortOptions" />
-          </div>
-          <div
-            class="flex items-center overflow-hidden rounded-lg border border-gray-200 dark:border-dark-600"
-          >
-            <button
-              class="px-2.5 py-2 transition-colors"
-              :class="
-                viewMode === 'card'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-dark-800 dark:text-dark-300 dark:hover:bg-dark-700'
-              "
-              :title="t('modelPlaza.cardView')"
-              @click="viewMode = 'card'"
-            >
-              <Icon name="grid" size="sm" />
-            </button>
-            <button
-              class="px-2.5 py-2 transition-colors"
-              :class="
-                viewMode === 'list'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-dark-800 dark:text-dark-300 dark:hover:bg-dark-700'
-              "
-              :title="t('modelPlaza.listView')"
-              @click="viewMode = 'list'"
-            >
-              <Icon name="menu" size="sm" />
-            </button>
-          </div>
-          <span class="whitespace-nowrap text-sm text-gray-500 dark:text-dark-400">
-            {{ t('modelPlaza.modelsCount', { count: filteredModels.length }) }}
-          </span>
         </div>
       </div>
 
@@ -102,40 +102,48 @@
       <!-- 卡片视图 -->
       <div v-else-if="viewMode === 'card'" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div
-          v-for="m in filteredModels"
+          v-for="(m, i) in filteredModels"
           :key="m.platform + '/' + m.name"
-          class="flex flex-col rounded-2xl border border-gray-200/70 bg-white p-4 transition-shadow hover:shadow-lg hover:shadow-primary-500/10 dark:border-dark-700/70 dark:bg-dark-800"
+          class="plaza-card flex flex-col rounded-2xl p-5"
+          :style="{ '--enter-delay': `${Math.min(i, 11) * 25}ms` }"
         >
           <!-- 提供商 + 状态 -->
-          <div class="mb-1 flex items-center justify-between">
-            <span class="text-xs text-gray-400 dark:text-dark-500">{{ m.platform }}</span>
+          <div class="mb-1.5 flex items-center justify-between">
             <span
-              class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+              class="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-dark-500"
+              >{{ m.platform }}</span
+            >
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400"
             >
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
               {{ t('modelPlaza.available') }}
             </span>
           </div>
-          <h3 class="mb-3 break-all text-sm font-semibold text-gray-900 dark:text-white">
+          <h3
+            class="mb-4 break-all text-[15px] font-semibold tracking-tight text-gray-900 dark:text-white"
+          >
             {{ m.name }}
           </h3>
 
           <!-- 分色价格块 -->
-          <div v-if="m.pricing" class="mb-3 grid grid-cols-2 gap-2">
+          <div v-if="m.pricing" class="mb-4 grid grid-cols-2 gap-2">
             <div
               v-for="block in priceBlocks(m.pricing)"
               :key="block.label"
-              class="rounded-lg px-3 py-2"
+              class="rounded-xl px-3.5 py-2.5"
               :class="block.class"
             >
-              <div class="text-[10px]" :class="block.labelClass">{{ block.label }}</div>
-              <div class="font-mono text-sm font-semibold text-gray-900 dark:text-white">
+              <div class="text-[10px] font-medium" :class="block.labelClass">{{ block.label }}</div>
+              <div
+                class="mt-0.5 text-[15px] font-semibold tabular-nums tracking-tight text-gray-900 dark:text-white"
+              >
                 {{ block.value }}
               </div>
               <div class="text-[10px] text-gray-400 dark:text-dark-500">{{ block.unit }}</div>
             </div>
           </div>
-          <div v-else class="mb-3 text-xs text-gray-400 dark:text-dark-500">
+          <div v-else class="mb-4 text-xs text-gray-400 dark:text-dark-500">
             {{ t('modelPlaza.noPricing') }}
           </div>
 
@@ -182,7 +190,7 @@
       <!-- 列表视图 -->
       <div
         v-else
-        class="overflow-x-auto rounded-2xl border border-gray-200/70 bg-white dark:border-dark-700/70 dark:bg-dark-800"
+        class="plaza-card overflow-x-auto rounded-2xl"
       >
         <table class="w-full min-w-[760px] text-left text-sm">
           <thead>
@@ -204,16 +212,16 @@
             >
               <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ m.name }}</td>
               <td class="px-4 py-3 text-gray-500 dark:text-dark-400">{{ m.platform }}</td>
-              <td class="px-4 py-3 font-mono text-gray-900 dark:text-white">
+              <td class="px-4 py-3 tabular-nums text-gray-900 dark:text-white">
                 {{ m.pricing?.input_price != null ? perMTok(m.pricing.input_price) : '—' }}
               </td>
-              <td class="px-4 py-3 font-mono text-gray-900 dark:text-white">
+              <td class="px-4 py-3 tabular-nums text-gray-900 dark:text-white">
                 {{ m.pricing?.output_price != null ? perMTok(m.pricing.output_price) : '—' }}
               </td>
-              <td class="px-4 py-3 font-mono text-sky-600 dark:text-sky-400">
+              <td class="px-4 py-3 tabular-nums text-sky-600 dark:text-sky-400">
                 {{ m.pricing?.cache_read_price != null ? perMTok(m.pricing.cache_read_price) : '—' }}
               </td>
-              <td class="px-4 py-3 font-mono text-pink-600 dark:text-pink-400">
+              <td class="px-4 py-3 tabular-nums text-pink-600 dark:text-pink-400">
                 {{ m.pricing?.cache_write_price != null ? perMTok(m.pricing.cache_write_price) : '—' }}
               </td>
               <td class="px-4 py-3">
@@ -468,3 +476,161 @@ async function load() {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.plaza-hero {
+  background:
+    radial-gradient(120% 180% at 0% 0%, rgba(99, 102, 241, 0.12), transparent 55%),
+    radial-gradient(120% 180% at 100% 0%, rgba(236, 72, 153, 0.1), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+:global(.dark .plaza-hero) {
+  background:
+    radial-gradient(120% 180% at 0% 0%, rgba(99, 102, 241, 0.22), transparent 55%),
+    radial-gradient(120% 180% at 100% 0%, rgba(236, 72, 153, 0.16), transparent 55%),
+    linear-gradient(180deg, rgba(30, 33, 44, 0.9), rgba(30, 33, 44, 0.6));
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.plaza-hero-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.plaza-hero-orb-a {
+  width: 260px;
+  height: 260px;
+  left: -60px;
+  top: -120px;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.5), transparent 70%);
+}
+.plaza-hero-orb-b {
+  width: 300px;
+  height: 300px;
+  right: -80px;
+  bottom: -160px;
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.4), transparent 70%);
+}
+.plaza-hero-icon {
+  background: linear-gradient(145deg, #6366f1, #a855f7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 24px rgba(139, 92, 246, 0.35);
+}
+.plaza-hero-title {
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+}
+.plaza-count-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgb(75 85 99);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+:global(.dark .plaza-count-pill) {
+  color: rgb(209 213 219);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.plaza-toolbar {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+:global(.dark .plaza-toolbar) {
+  background: rgba(30, 33, 44, 0.72);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.plaza-segment {
+  background: rgba(120, 120, 128, 0.12);
+}
+:global(.dark .plaza-segment) {
+  background: rgba(120, 120, 128, 0.24);
+}
+.plaza-segment-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 0.625rem;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.08);
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+:global(.dark .plaza-segment-thumb) {
+  background: rgb(55 60 74);
+}
+.plaza-segment-btn {
+  position: relative;
+  z-index: 1;
+  padding: 0.5rem 0.875rem;
+  transition: color 160ms ease-out, transform 120ms ease-out;
+}
+.plaza-segment-btn:active {
+  transform: scale(0.94);
+}
+.plaza-card {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1);
+  animation: plaza-enter 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+.plaza-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.04),
+    0 12px 32px rgba(15, 23, 42, 0.1);
+}
+:global(.dark .plaza-card) {
+  background: rgba(38, 42, 54, 0.85);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+:global(.dark .plaza-card):hover {
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 12px 32px rgba(0, 0, 0, 0.35);
+}
+@keyframes plaza-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plaza-card {
+    animation: none;
+  }
+  .plaza-card,
+  .plaza-segment-thumb,
+  .plaza-segment-btn {
+    transition: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .plaza-toolbar,
+  .plaza-count-pill {
+    backdrop-filter: none;
+    background: #fff;
+  }
+}
+</style>
