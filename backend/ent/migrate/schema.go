@@ -1411,6 +1411,71 @@ var (
 			},
 		},
 	}
+	// SchedulingActionsColumns holds the columns for the "scheduling_actions" table.
+	SchedulingActionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "policy_id", Type: field.TypeInt64},
+		{Name: "account_id", Type: field.TypeInt64},
+		{Name: "monitor_id", Type: field.TypeInt64},
+		{Name: "action", Type: field.TypeString, Size: 32},
+		{Name: "reason", Type: field.TypeString, Size: 500, Default: ""},
+		{Name: "original_priority", Type: field.TypeInt, Default: 0},
+		{Name: "restored", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime, Default: "CURRENT_TIMESTAMP"},
+	}
+	// SchedulingActionsTable holds the schema information for the "scheduling_actions" table.
+	SchedulingActionsTable = &schema.Table{
+		Name:       "scheduling_actions",
+		Columns:    SchedulingActionsColumns,
+		PrimaryKey: []*schema.Column{SchedulingActionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "schedulingaction_policy_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{SchedulingActionsColumns[1], SchedulingActionsColumns[8]},
+			},
+			{
+				Name:    "schedulingaction_account_id_restored",
+				Unique:  false,
+				Columns: []*schema.Column{SchedulingActionsColumns[2], SchedulingActionsColumns[7]},
+			},
+		},
+	}
+	// SchedulingPoliciesColumns holds the columns for the "scheduling_policies" table.
+	SchedulingPoliciesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "monitor_id", Type: field.TypeInt64},
+		{Name: "account_ids", Type: field.TypeJSON},
+		{Name: "trigger_consecutive_failures", Type: field.TypeInt, Default: 3},
+		{Name: "trigger_latency_ms", Type: field.TypeInt, Default: 0},
+		{Name: "action_type", Type: field.TypeString, Size: 32, Default: "pause"},
+		{Name: "pause_minutes", Type: field.TypeInt, Default: 0},
+		{Name: "priority_delta", Type: field.TypeInt, Default: 10},
+		{Name: "recover_consecutive_successes", Type: field.TypeInt, Default: 2},
+		{Name: "cooldown_minutes", Type: field.TypeInt, Default: 10},
+	}
+	// SchedulingPoliciesTable holds the schema information for the "scheduling_policies" table.
+	SchedulingPoliciesTable = &schema.Table{
+		Name:       "scheduling_policies",
+		Columns:    SchedulingPoliciesColumns,
+		PrimaryKey: []*schema.Column{SchedulingPoliciesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "schedulingpolicy_monitor_id",
+				Unique:  false,
+				Columns: []*schema.Column{SchedulingPoliciesColumns[5]},
+			},
+			{
+				Name:    "schedulingpolicy_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{SchedulingPoliciesColumns[4]},
+			},
+		},
+	}
 	// SecuritySecretsColumns holds the columns for the "security_secrets" table.
 	SecuritySecretsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -2012,6 +2077,8 @@ var (
 		PromoCodeUsagesTable,
 		ProxiesTable,
 		RedeemCodesTable,
+		SchedulingActionsTable,
+		SchedulingPoliciesTable,
 		SecuritySecretsTable,
 		SettingsTable,
 		SubscriptionPlansTable,
@@ -2127,6 +2194,12 @@ func init() {
 	RedeemCodesTable.ForeignKeys[1].RefTable = UsersTable
 	RedeemCodesTable.Annotation = &entsql.Annotation{
 		Table: "redeem_codes",
+	}
+	SchedulingActionsTable.Annotation = &entsql.Annotation{
+		Table: "scheduling_actions",
+	}
+	SchedulingPoliciesTable.Annotation = &entsql.Annotation{
+		Table: "scheduling_policies",
 	}
 	SecuritySecretsTable.Annotation = &entsql.Annotation{
 		Table: "security_secrets",

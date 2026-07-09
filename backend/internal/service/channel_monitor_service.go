@@ -64,6 +64,14 @@ type ChannelMonitorService struct {
 	// scheduler 由 wire 通过 SetScheduler 注入；CRUD 后调用对应钩子即时同步任务。
 	// 测试或未注入场景下保持 nil，所有钩子调用变为 no-op。
 	scheduler MonitorScheduler
+	// checkResultHook 由 wire 通过 SetCheckResultHook 注入（调度策略引擎）；
+	// 每次 RunCheck 完成后同步回调。nil 时为 no-op。
+	checkResultHook func(ctx context.Context, m *ChannelMonitor, results []*CheckResult)
+}
+
+// SetCheckResultHook 注入检测结果回调（setter 注入避免 wire 依赖环）。
+func (s *ChannelMonitorService) SetCheckResultHook(hook func(ctx context.Context, m *ChannelMonitor, results []*CheckResult)) {
+	s.checkResultHook = hook
 }
 
 // NewChannelMonitorService 创建渠道监控服务实例。
@@ -267,6 +275,9 @@ func (s *ChannelMonitorService) RunCheck(ctx context.Context, id int64) ([]*Chec
 	}
 	results := s.runChecksConcurrent(ctx, m)
 	s.persistCheckResults(ctx, m, results)
+	if s.checkResultHook != nil {
+		s.checkResultHook(ctx, m, results)
+	}
 	return results, nil
 }
 

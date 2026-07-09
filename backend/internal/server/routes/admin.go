@@ -657,6 +657,16 @@ func registerChannelMonitorRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		monitors.GET("/:id/history", h.Admin.ChannelMonitor.History)
 	}
 
+	policies := admin.Group("/scheduling-policies")
+	{
+		policies.GET("", h.Admin.SchedulingPolicy.List)
+		policies.POST("", h.Admin.SchedulingPolicy.Create)
+		policies.GET("/actions", h.Admin.SchedulingPolicy.Actions)
+		policies.GET("/:id", h.Admin.SchedulingPolicy.Get)
+		policies.PUT("/:id", h.Admin.SchedulingPolicy.Update)
+		policies.DELETE("/:id", h.Admin.SchedulingPolicy.Delete)
+	}
+
 	templates := admin.Group("/channel-monitor-templates")
 	{
 		templates.GET("", h.Admin.ChannelMonitorTemplate.List)

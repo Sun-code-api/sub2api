@@ -31,6 +31,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
+	"github.com/Wei-Shaw/sub2api/ent/schedulingaction"
+	"github.com/Wei-Shaw/sub2api/ent/schedulingpolicy"
 	"github.com/Wei-Shaw/sub2api/ent/schema"
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
@@ -1631,6 +1633,109 @@ func init() {
 	redeemcodeDescValidityDays := redeemcodeFields[10].Descriptor()
 	// redeemcode.DefaultValidityDays holds the default value on creation for the validity_days field.
 	redeemcode.DefaultValidityDays = redeemcodeDescValidityDays.Default.(int)
+	schedulingactionFields := schema.SchedulingAction{}.Fields()
+	_ = schedulingactionFields
+	// schedulingactionDescAction is the schema descriptor for action field.
+	schedulingactionDescAction := schedulingactionFields[3].Descriptor()
+	// schedulingaction.ActionValidator is a validator for the "action" field. It is called by the builders before save.
+	schedulingaction.ActionValidator = schedulingactionDescAction.Validators[0].(func(string) error)
+	// schedulingactionDescReason is the schema descriptor for reason field.
+	schedulingactionDescReason := schedulingactionFields[4].Descriptor()
+	// schedulingaction.DefaultReason holds the default value on creation for the reason field.
+	schedulingaction.DefaultReason = schedulingactionDescReason.Default.(string)
+	// schedulingaction.ReasonValidator is a validator for the "reason" field. It is called by the builders before save.
+	schedulingaction.ReasonValidator = schedulingactionDescReason.Validators[0].(func(string) error)
+	// schedulingactionDescOriginalPriority is the schema descriptor for original_priority field.
+	schedulingactionDescOriginalPriority := schedulingactionFields[5].Descriptor()
+	// schedulingaction.DefaultOriginalPriority holds the default value on creation for the original_priority field.
+	schedulingaction.DefaultOriginalPriority = schedulingactionDescOriginalPriority.Default.(int)
+	// schedulingactionDescRestored is the schema descriptor for restored field.
+	schedulingactionDescRestored := schedulingactionFields[6].Descriptor()
+	// schedulingaction.DefaultRestored holds the default value on creation for the restored field.
+	schedulingaction.DefaultRestored = schedulingactionDescRestored.Default.(bool)
+	schedulingpolicyMixin := schema.SchedulingPolicy{}.Mixin()
+	schedulingpolicyMixinFields0 := schedulingpolicyMixin[0].Fields()
+	_ = schedulingpolicyMixinFields0
+	schedulingpolicyFields := schema.SchedulingPolicy{}.Fields()
+	_ = schedulingpolicyFields
+	// schedulingpolicyDescCreatedAt is the schema descriptor for created_at field.
+	schedulingpolicyDescCreatedAt := schedulingpolicyMixinFields0[0].Descriptor()
+	// schedulingpolicy.DefaultCreatedAt holds the default value on creation for the created_at field.
+	schedulingpolicy.DefaultCreatedAt = schedulingpolicyDescCreatedAt.Default.(func() time.Time)
+	// schedulingpolicyDescUpdatedAt is the schema descriptor for updated_at field.
+	schedulingpolicyDescUpdatedAt := schedulingpolicyMixinFields0[1].Descriptor()
+	// schedulingpolicy.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	schedulingpolicy.DefaultUpdatedAt = schedulingpolicyDescUpdatedAt.Default.(func() time.Time)
+	// schedulingpolicy.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	schedulingpolicy.UpdateDefaultUpdatedAt = schedulingpolicyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// schedulingpolicyDescName is the schema descriptor for name field.
+	schedulingpolicyDescName := schedulingpolicyFields[0].Descriptor()
+	// schedulingpolicy.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	schedulingpolicy.NameValidator = func() func(string) error {
+		validators := schedulingpolicyDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// schedulingpolicyDescEnabled is the schema descriptor for enabled field.
+	schedulingpolicyDescEnabled := schedulingpolicyFields[1].Descriptor()
+	// schedulingpolicy.DefaultEnabled holds the default value on creation for the enabled field.
+	schedulingpolicy.DefaultEnabled = schedulingpolicyDescEnabled.Default.(bool)
+	// schedulingpolicyDescAccountIds is the schema descriptor for account_ids field.
+	schedulingpolicyDescAccountIds := schedulingpolicyFields[3].Descriptor()
+	// schedulingpolicy.DefaultAccountIds holds the default value on creation for the account_ids field.
+	schedulingpolicy.DefaultAccountIds = schedulingpolicyDescAccountIds.Default.([]int64)
+	// schedulingpolicyDescTriggerConsecutiveFailures is the schema descriptor for trigger_consecutive_failures field.
+	schedulingpolicyDescTriggerConsecutiveFailures := schedulingpolicyFields[4].Descriptor()
+	// schedulingpolicy.DefaultTriggerConsecutiveFailures holds the default value on creation for the trigger_consecutive_failures field.
+	schedulingpolicy.DefaultTriggerConsecutiveFailures = schedulingpolicyDescTriggerConsecutiveFailures.Default.(int)
+	// schedulingpolicy.TriggerConsecutiveFailuresValidator is a validator for the "trigger_consecutive_failures" field. It is called by the builders before save.
+	schedulingpolicy.TriggerConsecutiveFailuresValidator = schedulingpolicyDescTriggerConsecutiveFailures.Validators[0].(func(int) error)
+	// schedulingpolicyDescTriggerLatencyMs is the schema descriptor for trigger_latency_ms field.
+	schedulingpolicyDescTriggerLatencyMs := schedulingpolicyFields[5].Descriptor()
+	// schedulingpolicy.DefaultTriggerLatencyMs holds the default value on creation for the trigger_latency_ms field.
+	schedulingpolicy.DefaultTriggerLatencyMs = schedulingpolicyDescTriggerLatencyMs.Default.(int)
+	// schedulingpolicy.TriggerLatencyMsValidator is a validator for the "trigger_latency_ms" field. It is called by the builders before save.
+	schedulingpolicy.TriggerLatencyMsValidator = schedulingpolicyDescTriggerLatencyMs.Validators[0].(func(int) error)
+	// schedulingpolicyDescActionType is the schema descriptor for action_type field.
+	schedulingpolicyDescActionType := schedulingpolicyFields[6].Descriptor()
+	// schedulingpolicy.DefaultActionType holds the default value on creation for the action_type field.
+	schedulingpolicy.DefaultActionType = schedulingpolicyDescActionType.Default.(string)
+	// schedulingpolicy.ActionTypeValidator is a validator for the "action_type" field. It is called by the builders before save.
+	schedulingpolicy.ActionTypeValidator = schedulingpolicyDescActionType.Validators[0].(func(string) error)
+	// schedulingpolicyDescPauseMinutes is the schema descriptor for pause_minutes field.
+	schedulingpolicyDescPauseMinutes := schedulingpolicyFields[7].Descriptor()
+	// schedulingpolicy.DefaultPauseMinutes holds the default value on creation for the pause_minutes field.
+	schedulingpolicy.DefaultPauseMinutes = schedulingpolicyDescPauseMinutes.Default.(int)
+	// schedulingpolicy.PauseMinutesValidator is a validator for the "pause_minutes" field. It is called by the builders before save.
+	schedulingpolicy.PauseMinutesValidator = schedulingpolicyDescPauseMinutes.Validators[0].(func(int) error)
+	// schedulingpolicyDescPriorityDelta is the schema descriptor for priority_delta field.
+	schedulingpolicyDescPriorityDelta := schedulingpolicyFields[8].Descriptor()
+	// schedulingpolicy.DefaultPriorityDelta holds the default value on creation for the priority_delta field.
+	schedulingpolicy.DefaultPriorityDelta = schedulingpolicyDescPriorityDelta.Default.(int)
+	// schedulingpolicy.PriorityDeltaValidator is a validator for the "priority_delta" field. It is called by the builders before save.
+	schedulingpolicy.PriorityDeltaValidator = schedulingpolicyDescPriorityDelta.Validators[0].(func(int) error)
+	// schedulingpolicyDescRecoverConsecutiveSuccesses is the schema descriptor for recover_consecutive_successes field.
+	schedulingpolicyDescRecoverConsecutiveSuccesses := schedulingpolicyFields[9].Descriptor()
+	// schedulingpolicy.DefaultRecoverConsecutiveSuccesses holds the default value on creation for the recover_consecutive_successes field.
+	schedulingpolicy.DefaultRecoverConsecutiveSuccesses = schedulingpolicyDescRecoverConsecutiveSuccesses.Default.(int)
+	// schedulingpolicy.RecoverConsecutiveSuccessesValidator is a validator for the "recover_consecutive_successes" field. It is called by the builders before save.
+	schedulingpolicy.RecoverConsecutiveSuccessesValidator = schedulingpolicyDescRecoverConsecutiveSuccesses.Validators[0].(func(int) error)
+	// schedulingpolicyDescCooldownMinutes is the schema descriptor for cooldown_minutes field.
+	schedulingpolicyDescCooldownMinutes := schedulingpolicyFields[10].Descriptor()
+	// schedulingpolicy.DefaultCooldownMinutes holds the default value on creation for the cooldown_minutes field.
+	schedulingpolicy.DefaultCooldownMinutes = schedulingpolicyDescCooldownMinutes.Default.(int)
+	// schedulingpolicy.CooldownMinutesValidator is a validator for the "cooldown_minutes" field. It is called by the builders before save.
+	schedulingpolicy.CooldownMinutesValidator = schedulingpolicyDescCooldownMinutes.Validators[0].(func(int) error)
 	securitysecretMixin := schema.SecuritySecret{}.Mixin()
 	securitysecretMixinFields0 := securitysecretMixin[0].Fields()
 	_ = securitysecretMixinFields0
