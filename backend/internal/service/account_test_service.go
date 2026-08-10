@@ -802,7 +802,12 @@ const opencodeDefaultTestModel = "deepseek-v4-flash"
 // account by sending a minimal OpenAI-compatible chat completion to
 // {base_url}/chat/completions. OpenCode Go only exposes the OpenAI-compatible
 // chat endpoint for its text models, so no Responses/messages probes exist.
+//
+// 连通性 probe 成功后，若账号凭据带 workspace_id + auth_cookie，会顺带抓取
+// OpenCode Go dashboard 的额度窗口（5H/周/月）写入 account.extra
+// （opencode_quota_* 字段），使状态查询兼容额度展示。额度抓取失败不阻塞测活。
 func (s *AccountTestService) testOpencodeAccountConnection(c *gin.Context, account *Account, modelID string, prompt string) error {
+	ctx := c.Request.Context()
 	testModelID := modelID
 	if testModelID == "" {
 		testModelID = opencodeDefaultTestModel
@@ -824,7 +829,22 @@ func (s *AccountTestService) testOpencodeAccountConnection(c *gin.Context, accou
 	if err != nil {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Invalid base URL: %s", err.Error()))
 	}
-	return s.testOpenAIChatCompletionsConnection(c, account, testModelID, prompt, normalizedBaseURL, apiKey)
+	if err := s.testOpenAIChatCompletionsConnection(c, account, testModelID, prompt, normalizedBaseURL, apiKey); err != nil {
+		return err
+	}
+
+	// 连通性 OK → 尝试刷新额度窗口（dashboard 抓取）。
+	workspaceID := strings.TrimSpace(account.GetCredential("workspace_id"))
+	authCookie := strings.TrimSpace(account.GetCredential("auth_cookie"))
+	if workspaceID != "" && authCookie != "" {
+		if quota, qErr := fetchOpencodeQuota(ctx, workspaceID, authCookie, 30*time.Second); qErr == nil {
+			if updates := opencodeQuotaExtraUpdates(quota); len(updates) > 0 && s.accountRepo != nil {
+				_ = s.accountRepo.UpdateExtra(ctx, account.ID, updates)
+				mergeAccountExtra(account, updates)
+			}
+		}
+	}
+	return nil
 }
 
 // testGrokAccountConnection routes Grok admin connectivity tests by explicit mode first,
