@@ -89,7 +89,9 @@ func (s *OpenAIGatewayService) ForwardAsChatCompletions(
 
 	// 入口分流：APIKey 账号 + 强制或已探测确认上游不支持 Responses，走 CC 直转。
 	// 自动模式下标记缺失（未探测）按"现状即证据"原则继续走下方原 Responses 转换路径。
-	if account.Type == AccountTypeAPIKey && !openai_compat.ShouldUseResponsesAPI(account.Extra) {
+	// OpenCode Go 账号恒走 CC 直转：Go 套餐只有 OpenAI 兼容 chat/completions 端点，
+	// 且账号 extra 可能尚未探测 responses 标记，绝不允许落到默认 api.openai.com 路径。
+	if account.Type == AccountTypeAPIKey && (account.IsOpencode() || !openai_compat.ShouldUseResponsesAPI(account.Extra)) {
 		return s.forwardAsRawChatCompletions(ctx, c, account, body, defaultMappedModel)
 	}
 
