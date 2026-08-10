@@ -226,8 +226,9 @@ export function platformLabel(p: string): string {
     case 'openai': return 'OpenAI'
     case 'antigravity': return 'Antigravity'
     case 'gemini': return 'Gemini'
-    case 'grok': return 'Grok'
-    case 'composite': return 'Composite'
+      case 'grok': return 'Grok'
+      case 'opencode': return 'OpenCode Go'
+      case 'composite': return 'Composite'
     default: return p || 'API'
   }
 }

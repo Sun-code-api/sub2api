@@ -1777,10 +1777,12 @@ const qualityTargetLabel = (target: string) => {
       return 'Anthropic'
     case 'gemini':
       return 'Gemini'
-    case 'grok':
-      return 'Grok'
-    default:
-      return target
+      case 'grok':
+        return 'Grok'
+      case 'opencode':
+        return 'OpenCode Go'
+      default:
+        return target
   }
 }
 
