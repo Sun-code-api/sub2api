@@ -98,6 +98,31 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 	setOpsRequestContext(c, reqModel, reqStream)
 	setOpsEndpointContext(c, "", int16(service.RequestTypeFromLegacy(reqStream, false)))
 
+	// 响应缓存（非流式 OpenAI 兼容 Chat Completions）：
+	// 命中直接返回缓存 JSON（X-Cache: HIT），不产生上游调用与计费；
+	// 未命中则透传并在成功后写入缓存。仅当 gateway.response_cache_enabled 开启。
+	responseCacheEnabled := !reqStream && h.gatewayService.ResponseCacheEnabled()
+	var responseCacheKey string
+	var captureWriter *responseCacheCaptureWriter
+	if responseCacheEnabled {
+		groupID := int64(0)
+		if apiKey.GroupID != nil {
+			groupID = *apiKey.GroupID
+		}
+		responseCacheKey = service.BuildResponseCacheKey(apiKey.ID, groupID, reqModel, body)
+		if cached, err := h.gatewayService.GetResponseCache(c.Request.Context(), responseCacheKey); err == nil && len(cached) > 0 {
+			reqLog.Debug("openai_chat_completions.response_cache_hit", zap.Int("bytes", len(cached)))
+			c.Header("X-Cache", "HIT")
+			c.Data(http.StatusOK, "application/json", cached)
+			return
+		}
+		captureWriter = &responseCacheCaptureWriter{
+			ResponseWriter: c.Writer,
+			max:            h.gatewayService.ResponseCacheMaxBytes(),
+		}
+		c.Writer = captureWriter
+	}
+
 	if decision := h.checkSecurityAudit(c, reqLog, apiKey, subject, service.ContentModerationProtocolOpenAIChat, reqModel, body); decision != nil && !decision.AllowNextStage {
 		h.openAISecurityAuditError(c, decision)
 		return
@@ -344,6 +369,14 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(reqModel), true, result.FirstTokenMs)
 		} else {
 			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(reqModel), true, nil)
+		}
+
+		// 响应缓存写入：非流式成功响应（HTTP 200）透传后存入缓存，
+		// TTL 内相同请求直接命中，实现"重复请求首字≈0"。
+		if responseCacheEnabled && captureWriter != nil && captureWriter.buf.Len() > 0 && c.Writer.Status() == http.StatusOK {
+			if err := h.gatewayService.SetResponseCache(c.Request.Context(), responseCacheKey, captureWriter.buf.Bytes(), h.gatewayService.ResponseCacheTTL()); err != nil {
+				reqLog.Debug("openai_chat_completions.response_cache_store_failed", zap.Error(err))
+			}
 		}
 
 		userAgent := c.GetHeader("User-Agent")

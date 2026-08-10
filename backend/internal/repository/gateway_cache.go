@@ -70,6 +70,30 @@ const (
 	grokVideoBilledPrefix         = "grok_video_billed:"
 )
 
+// GetResponseCache 读取网关响应缓存（service.responseCachePort 实现）。
+// 未命中返回 service.ErrResponseCacheMiss。
+func (c *gatewayCache) GetResponseCache(ctx context.Context, key string) ([]byte, error) {
+	if c == nil || c.rdb == nil || key == "" {
+		return nil, service.ErrResponseCacheMiss
+	}
+	val, err := c.rdb.Get(ctx, key).Bytes()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, service.ErrResponseCacheMiss
+		}
+		return nil, err
+	}
+	return val, nil
+}
+
+// SetResponseCache 写入网关响应缓存。驱动不可用或参数非法时静默忽略。
+func (c *gatewayCache) SetResponseCache(ctx context.Context, key string, payload []byte, ttl time.Duration) error {
+	if c == nil || c.rdb == nil || key == "" || len(payload) == 0 {
+		return nil
+	}
+	return c.rdb.Set(ctx, key, payload, ttl).Err()
+}
+
 func (c *gatewayCache) SetGrokVideoPendingBilling(ctx context.Context, key string, payload []byte, ttl time.Duration) error {
 	if c == nil || c.rdb == nil {
 		return errors.New("gateway cache unavailable")

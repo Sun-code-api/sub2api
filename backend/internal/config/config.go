@@ -898,6 +898,13 @@ type GatewayConfig struct {
 	TextMaxBodySize int64 `mapstructure:"text_max_body_size"`
 	// 非流式上游响应体读取上限（字节），用于防止无界读取导致内存放大
 	UpstreamResponseReadMaxBytes int64 `mapstructure:"upstream_response_read_max_bytes"`
+	// ResponseCacheEnabled: 非流式 OpenAI 兼容 Chat Completions 响应缓存总开关（默认关闭）。
+	// 命中时直接返回缓存 JSON（响应头带 X-Cache: HIT），不产生上游调用与计费。
+	ResponseCacheEnabled bool `mapstructure:"response_cache_enabled"`
+	// ResponseCacheTTLSeconds: 响应缓存 TTL（秒），默认 60。
+	ResponseCacheTTLSeconds int `mapstructure:"response_cache_ttl_seconds"`
+	// ResponseCacheMaxBodyBytes: 允许缓存的响应体上限（字节），默认 256KB。
+	ResponseCacheMaxBodyBytes int64 `mapstructure:"response_cache_max_body_bytes"`
 	// 代理探测响应体读取上限（字节）
 	ProxyProbeResponseReadMaxBytes int64 `mapstructure:"proxy_probe_response_read_max_bytes"`
 	// Gemini 上游响应头调试日志开关（默认关闭，避免高频日志开销）

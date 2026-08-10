@@ -1067,7 +1067,14 @@ func normalizeOpenAIModelForUpstream(account *Account, model string) string {
 	if account == nil || account.Type == AccountTypeOAuth {
 		return normalizeCodexModel(model)
 	}
-	return strings.TrimSpace(model)
+	model = strings.TrimSpace(model)
+	// OpenCode Go 客户端以 "opencode-go/<id>" 形式引用 Go 模型；
+	// 上游 OpenAI 兼容端点只接受裸模型 ID，剥掉前缀。
+	if account.IsOpencode() {
+		model = strings.TrimPrefix(model, "opencode-go/")
+		model = strings.TrimPrefix(model, "opencode/")
+	}
+	return model
 }
 
 func SupportsVerbosity(model string) bool {

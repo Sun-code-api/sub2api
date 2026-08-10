@@ -272,7 +272,7 @@ func (a *Account) IsGrokOAuth() bool {
 }
 
 func (a *Account) IsOpenAICompatible() bool {
-	return a != nil && (a.Platform == PlatformOpenAI || a.Platform == PlatformGrok)
+	return a != nil && (a.Platform == PlatformOpenAI || a.Platform == PlatformGrok || a.Platform == PlatformOpencode)
 }
 
 func (a *Account) GeminiOAuthType() string {
@@ -1279,6 +1279,38 @@ func (a *Account) IsOpenAIPersonalAccessToken() bool {
 
 func (a *Account) IsOpenAIApiKey() bool {
 	return a.IsOpenAI() && a.Type == AccountTypeAPIKey
+}
+
+func (a *Account) IsOpencode() bool {
+	return a != nil && a.Platform == PlatformOpencode
+}
+
+func (a *Account) IsOpencodeAPIKey() bool {
+	return a.IsOpencode() && a.Type == AccountTypeAPIKey
+}
+
+// DefaultOpencodeBaseURL is the OpenAI-compatible OpenCode Go upstream endpoint.
+const DefaultOpencodeBaseURL = "https://opencode.ai/zen/go/v1"
+
+// GetOpencodeBaseURL resolves the OpenCode Go upstream base URL. An explicit
+// credentials.base_url wins; otherwise the official OpenCode Go endpoint is
+// used. The gateway appends /chat/completions to this base.
+func (a *Account) GetOpencodeBaseURL() string {
+	if !a.IsOpencode() {
+		return ""
+	}
+	baseURL := strings.TrimSpace(a.GetCredential("base_url"))
+	if baseURL != "" {
+		return baseURL
+	}
+	return DefaultOpencodeBaseURL
+}
+
+func (a *Account) GetOpencodeAPIKey() string {
+	if !a.IsOpencodeAPIKey() {
+		return ""
+	}
+	return a.GetCredential("api_key")
 }
 
 func (a *Account) GetOpenAIBaseURL() string {

@@ -1196,6 +1196,13 @@ func (s *OpenAIGatewayService) GetAccessToken(ctx context.Context, account *Acco
 			}
 			return apiKey, "apikey", nil
 		}
+		if account.IsOpencode() {
+			apiKey := account.GetOpencodeAPIKey()
+			if apiKey == "" {
+				return "", "", errors.New("api_key not found in credentials")
+			}
+			return apiKey, "apikey", nil
+		}
 		apiKey := account.GetOpenAIApiKey()
 		if apiKey == "" {
 			return "", "", errors.New("api_key not found in credentials")

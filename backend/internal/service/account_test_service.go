@@ -289,6 +289,10 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 		return s.testOpenAIAccountConnection(c, account, modelID, prompt, normalizeAccountTestMode(mode))
 	}
 
+	if account.IsOpencode() {
+		return s.testOpencodeAccountConnection(c, account, modelID, prompt)
+	}
+
 	if account.IsGemini() {
 		return s.testGeminiAccountConnection(c, account, modelID, prompt)
 	}
@@ -788,6 +792,39 @@ func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account
 
 	// Process SSE stream
 	return s.processOpenAIStream(c, resp.Body)
+}
+
+// opencodeDefaultTestModel is the cheapest documented OpenCode Go model used
+// for liveness probes (mirrors account-pool's probe choice).
+const opencodeDefaultTestModel = "deepseek-v4-flash"
+
+// testOpencodeAccountConnection tests an OpenCode Go (platform=opencode)
+// account by sending a minimal OpenAI-compatible chat completion to
+// {base_url}/chat/completions. OpenCode Go only exposes the OpenAI-compatible
+// chat endpoint for its text models, so no Responses/messages probes exist.
+func (s *AccountTestService) testOpencodeAccountConnection(c *gin.Context, account *Account, modelID string, prompt string) error {
+	testModelID := modelID
+	if testModelID == "" {
+		testModelID = opencodeDefaultTestModel
+	}
+	testModelID = account.GetMappedModel(testModelID)
+	// OpenCode Go 客户端引用模型时可能带 "opencode-go/" 前缀，上游只接受裸 ID。
+	testModelID = strings.TrimPrefix(strings.TrimPrefix(testModelID, "opencode-go/"), "opencode/")
+
+	apiKey := account.GetOpencodeAPIKey()
+	if apiKey == "" {
+		return s.sendErrorAndEnd(c, "No API key available")
+	}
+
+	baseURL := account.GetOpencodeBaseURL()
+	if baseURL == "" {
+		baseURL = DefaultOpencodeBaseURL
+	}
+	normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Invalid base URL: %s", err.Error()))
+	}
+	return s.testOpenAIChatCompletionsConnection(c, account, testModelID, prompt, normalizedBaseURL, apiKey)
 }
 
 // testGrokAccountConnection routes Grok admin connectivity tests by explicit mode first,
