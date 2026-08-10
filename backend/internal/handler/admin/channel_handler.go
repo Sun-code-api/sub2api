@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -515,7 +516,12 @@ var platformToLiteLLMProvider = map[string]string{
 	service.PlatformGemini:      "google",
 	service.PlatformAntigravity: "anthropic",
 	service.PlatformGrok:        "xai",
+	service.PlatformOpencode:    "opencode",
 }
+
+// opencodeLiteLLMProviders 是 OpenCode Go 模型在 LiteLLM 定价目录中归属的
+// provider 集合（Go 套餐聚合了 xAI / 智谱 / Kimi / DeepSeek / MiMo / 混元）。
+var opencodeLiteLLMProviders = []string{"xai", "zhipu", "moonshot", "deepseek", "mimo", "hunyuan"}
 
 // SyncPricingModels 返回 LiteLLM 定价目录中指定平台的最新模型列表
 // GET /api/v1/admin/channels/pricing/sync-models?platform=anthropic
@@ -524,6 +530,24 @@ func (h *ChannelHandler) SyncPricingModels(c *gin.Context) {
 	if platform == "" {
 		response.ErrorFrom(c, infraerrors.BadRequest("MISSING_PARAMETER", "platform parameter is required").
 			WithMetadata(map[string]string{"param": "platform"}))
+		return
+	}
+
+	// opencode 是聚合平台：合并多个 LiteLLM provider 的模型，去重排序。
+	if platform == service.PlatformOpencode {
+		seen := make(map[string]struct{}, 64)
+		models := make([]string, 0, 64)
+		for _, provider := range opencodeLiteLLMProviders {
+			for _, m := range h.pricingService.ListModelNamesByProvider(provider) {
+				if _, dup := seen[m]; dup {
+					continue
+				}
+				seen[m] = struct{}{}
+				models = append(models, m)
+			}
+		}
+		sort.Strings(models)
+		response.Success(c, gin.H{"models": models})
 		return
 	}
 
