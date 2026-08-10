@@ -1,0 +1,68 @@
+name: Build sub2api (opencode-pool)
+
+# Fork 专用构建：产出单文件 linux/amd64 二进制（含前端 embed）。
+# 手动触发：构建 + 上传 artifact；
+# tag 推送（v*）：构建 + 上传 artifact + 发布 GitHub Release（服务器部署脚本从此拉取）。
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: backend/go.sum
+
+      - name: Build frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+        working-directory: frontend
+
+      - name: Build backend (linux/amd64)
+        run: make -C backend build
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: amd64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sub2api-linux-amd64
+          path: backend/bin/server
+          retention-days: 14
+
+      - name: Publish release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: backend/bin/server
+          generate_release_notes: true
