@@ -46,12 +46,15 @@ jobs:
           pnpm run build
         working-directory: frontend
 
-      - name: Build backend (linux/amd64)
+      - name: Build backend (linux/amd64, embedded frontend)
         run: make -C backend build
         env:
           CGO_ENABLED: '0'
           GOOS: linux
           GOARCH: amd64
+          # 前端通过 //go:build embed 嵌入（backend/internal/web/embed_on.go），
+          # 不带该 tag 的构建无前端托管，根路径会返回 404。
+          GOFLAGS: '-tags=embed'
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
