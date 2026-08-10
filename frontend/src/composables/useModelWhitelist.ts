@@ -160,6 +160,21 @@ const xaiModels = [
   'grok-imagine-video-1.5'
 ]
 
+// OpenCode Go (opencode 平台，OpenAI 兼容 chat/completions 端点模型)
+const opencodeModels = [
+  'grok-4.5',
+  'glm-5.2',
+  'glm-5.1',
+  'kimi-k3',
+  'kimi-k2.7-code',
+  'kimi-k2.6',
+  'deepseek-v4-pro',
+  'deepseek-v4-flash',
+  'mimo-v2.5',
+  'mimo-v2.5-pro',
+  'hy3'
+]
+
 // Cohere
 const cohereModels = [
   'command-a-03-2025',
@@ -240,6 +255,7 @@ const allModelsList: string[] = [
   ...mistralModels,
   ...metaModels,
   ...xaiModels,
+  ...opencodeModels,
   ...cohereModels,
   ...yiModels,
   ...moonshotModels,
@@ -423,6 +439,7 @@ export function getModelsByPlatform(platform: string): string[] {
     case 'meta': return metaModels
     case 'xai':
     case 'grok': return xaiModels
+    case 'opencode': return opencodeModels
     case 'cohere': return cohereModels
     case 'yi': return yiModels
     case 'moonshot': return moonshotModels
