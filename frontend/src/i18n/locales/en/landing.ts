@@ -93,15 +93,16 @@ export default {
         }
       }
     },
-    providers: {
-      title: 'Supported AI Models',
-      description: 'One API, Multiple Choices',
-      supported: 'Supported',
-      soon: 'Soon',
-      claude: 'Claude',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
-      more: 'More'
+      providers: {
+        title: 'Supported AI Models',
+        description: 'One API, Multiple Choices',
+        supported: 'Supported',
+        soon: 'Soon',
+        claude: 'Claude',
+        gemini: 'Gemini',
+        antigravity: 'Antigravity',
+        opencode: 'OpenCode Go',
+        more: 'More'
     },
     // CTA section
     cta: {

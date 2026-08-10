@@ -301,14 +301,15 @@ export default {
       deleteConfirm: "确定要删除账号 '{name}' 吗？此操作无法撤销。",
       failedToClearRateLimit: '清除速率限制失败',
       platforms: {
-        claude: 'Claude',
-        openai: 'OpenAI',
-        anthropic: 'Anthropic',
-        gemini: 'Gemini',
-        antigravity: 'Antigravity',
-        grok: 'Grok',
-      },
-      types: {
+          claude: 'Claude',
+          openai: 'OpenAI',
+          anthropic: 'Anthropic',
+          gemini: 'Gemini',
+          antigravity: 'Antigravity',
+          grok: 'Grok',
+          opencode: 'OpenCode Go',
+        },
+        types: {
         oauth: 'OAuth',
         chatgptOauth: 'ChatGPT OAuth',
         responsesApi: 'Responses API',

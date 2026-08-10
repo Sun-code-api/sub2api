@@ -98,14 +98,15 @@ export default {
       failedToToggleSchedulable: 'Failed to toggle scheduling status',
       groupCountTotal: '{count} groups total',
       platforms: {
-        anthropic: 'Anthropic',
-        claude: 'Claude',
-        openai: 'OpenAI',
-        gemini: 'Gemini',
-        antigravity: 'Antigravity',
-        grok: 'Grok',
-      },
-      types: {
+          anthropic: 'Anthropic',
+          claude: 'Claude',
+          openai: 'OpenAI',
+          gemini: 'Gemini',
+          antigravity: 'Antigravity',
+          grok: 'Grok',
+          opencode: 'OpenCode Go',
+        },
+        types: {
         oauth: 'OAuth',
         chatgptOauth: 'ChatGPT OAuth',
         responsesApi: 'Responses API',

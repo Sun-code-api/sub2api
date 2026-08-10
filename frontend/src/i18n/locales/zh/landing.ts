@@ -93,15 +93,16 @@ export default {
         }
       }
     },
-    providers: {
-      title: '已支持的 AI 模型',
-      description: '一个 API，多种选择',
-      supported: '已支持',
-      soon: '即将推出',
-      claude: 'Claude',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
-      more: '更多'
+      providers: {
+        title: '支持的主流 AI 模型',
+        description: '一个 API，多种选择',
+        supported: '已支持',
+        soon: '即将推出',
+        claude: 'Claude',
+        gemini: 'Gemini',
+        antigravity: 'Antigravity',
+        opencode: 'OpenCode Go',
+        more: '更多'
     },
     // CTA 区块
     cta: {

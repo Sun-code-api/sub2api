@@ -1,4 +1,4 @@
-// Package model 定义服务层使用的数据模型。
+﻿// Package model 定义服务层使用的数据模型。
 package model
 
 import "time"
@@ -37,11 +37,12 @@ const (
 	PlatformGemini      = "gemini"
 	PlatformAntigravity = "antigravity"
 	PlatformGrok        = "grok"
+	PlatformOpencode    = "opencode"
 )
 
 // AllPlatforms 返回所有支持的平台列表
 func AllPlatforms() []string {
-	return []string{PlatformAnthropic, PlatformOpenAI, PlatformGemini, PlatformAntigravity, PlatformGrok}
+	return []string{PlatformAnthropic, PlatformOpenAI, PlatformGemini, PlatformAntigravity, PlatformGrok, PlatformOpencode}
 }
 
 // Validate 验证规则配置的有效性

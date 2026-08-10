@@ -380,15 +380,16 @@ function categoryLabel(category: string) {
 
 function platformLabel(value: string) {
   return (
-    {
-      anthropic: 'Claude',
-      openai: 'OpenAI',
-      grok: 'Grok',
-      kiro: 'Kiro',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
-      composite: 'Composite',
-    } as Record<string, string>
+      {
+        anthropic: 'Claude',
+        openai: 'OpenAI',
+        grok: 'Grok',
+        kiro: 'Kiro',
+        gemini: 'Gemini',
+        antigravity: 'Antigravity',
+        opencode: 'OpenCode Go',
+        composite: 'Composite',
+      } as Record<string, string>
   )[value] || value
 }
 
