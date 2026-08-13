@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { PLATFORM_QUOTA_PLATFORMS } from '@/api/admin/users'
+
+const QUOTA_PLATFORM_COUNT = PLATFORM_QUOTA_PLATFORMS.length
 
 const apiMocks = vi.hoisted(() => ({
   getPlatformQuotas: vi.fn(),
@@ -98,8 +101,8 @@ describe('UserPlatformQuotaModal', () => {
     })
     const w = await mountAndOpen()
     const inputs = w.findAll('input[type=number]')
-    // 5 platforms × 3 windows = 15 inputs
-    expect(inputs.length).toBe(15)
+    // one row per quota platform × 3 windows (daily/weekly/monthly)
+    expect(inputs.length).toBe(QUOTA_PLATFORM_COUNT * 3)
     // 第一个 input 是 anthropic.daily = 10
     expect((inputs[0].element as HTMLInputElement).value).toBe('10')
   })
@@ -121,7 +124,7 @@ describe('UserPlatformQuotaModal', () => {
     expect(apiMocks.updatePlatformQuotas).toHaveBeenCalledTimes(1)
     const [uid, payload] = apiMocks.updatePlatformQuotas.mock.calls[0]
     expect(uid).toBe(99)
-    expect(payload).toHaveLength(5) // 5 platforms always submitted
+    expect(payload).toHaveLength(QUOTA_PLATFORM_COUNT) // every platform is always submitted
     const openai = payload.find((p: any) => p.platform === 'openai')
     expect(openai.weekly_limit_usd).toBe(20)
   })

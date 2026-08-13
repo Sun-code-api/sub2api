@@ -329,8 +329,22 @@ export async function bindUserAuthIdentity(
 
 /**
  * Platform quota types
+ *
+ * Single source of truth for which platforms accept a per-user quota; mirrors
+ * service.AllowedQuotaPlatforms on the backend. Render order is display order.
+ * Keep both in sync — a platform missing here silently disappears from the
+ * quota UI even though the backend accepts it.
  */
-export type PlatformQuotaPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok'
+export const PLATFORM_QUOTA_PLATFORMS = [
+  'anthropic',
+  'openai',
+  'gemini',
+  'antigravity',
+  'grok',
+  'opencode',
+] as const
+
+export type PlatformQuotaPlatform = (typeof PLATFORM_QUOTA_PLATFORMS)[number]
 export type PlatformQuotaWindow = 'daily' | 'weekly' | 'monthly'
 
 export interface PlatformQuotaItem {

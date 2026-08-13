@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -115,9 +116,10 @@ func TestUpdateUserPlatformQuotas_Success(t *testing.T) {
 	if repo.upsertCalls[0].userID != 42 || len(repo.upsertCalls[0].records) != len(service.AllowedQuotaPlatforms) {
 		t.Errorf("unexpected upsert call: %+v", repo.upsertCalls[0])
 	}
-	// 缓存失效：按全部允许平台统一失效。
-	if len(cache.deleteCalls) != 5 {
-		t.Errorf("expected 5 cache delete calls, got %d: %+v", len(cache.deleteCalls), cache.deleteCalls)
+	// 缓存失效：按全部允许平台统一失效（数量随 AllowedQuotaPlatforms 增长）。
+	if len(cache.deleteCalls) != len(service.AllowedQuotaPlatforms) {
+		t.Errorf("expected %d cache delete calls, got %d: %+v",
+			len(service.AllowedQuotaPlatforms), len(cache.deleteCalls), cache.deleteCalls)
 	}
 }
 
@@ -156,9 +158,15 @@ func TestUpdateUserPlatformQuotas_RejectsNegativeLimit(t *testing.T) {
 
 func TestUpdateUserPlatformQuotas_RejectsTooManyEntries(t *testing.T) {
 	h := buildTestHandler(&upsertCapturingQuotaRepo{}, &billingCacheStub{})
-	body := `{"quotas":[
-		{"platform":"anthropic"},{"platform":"openai"},{"platform":"gemini"},{"platform":"antigravity"},{"platform":"grok"},{"platform":"anthropic"}
-	]}`
+	// One more entry than there are allowed platforms, derived from the
+	// constant so adding a platform does not silently turn this into a
+	// duplicate-detection test instead of a length-guard test.
+	entries := make([]string, 0, len(service.AllowedQuotaPlatforms)+1)
+	for _, p := range service.AllowedQuotaPlatforms {
+		entries = append(entries, fmt.Sprintf(`{"platform":%q}`, p))
+	}
+	entries = append(entries, `{"platform":"anthropic"}`)
+	body := `{"quotas":[` + strings.Join(entries, ",") + `]}`
 	c, w := putReq(t, body)
 	h.UpdateUserPlatformQuotas(c)
 	if w.Code != http.StatusBadRequest {
