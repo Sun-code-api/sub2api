@@ -1448,6 +1448,8 @@ export default {
         grokRetryAfter: 'Retry after {time}',
         grokProbe: 'Probe',
         grokProbeTooltip: 'Send a minimal xAI Responses probe and read quota headers',
+        opencodeProbe: 'Query quota',
+        opencodeProbeTooltip: 'Query OpenCode official /zen/go/v1/usage for 5H / weekly / monthly windows',
         grokResetUnsupported: 'Reset unsupported',
         grokResetUnsupportedTooltip: 'xAI does not expose reset credits for Grok OAuth accounts',
         grokNoHeaders: 'No quota headers observed',

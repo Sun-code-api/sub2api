@@ -245,6 +245,30 @@ export async function testAccount(id: number): Promise<{
   return data
 }
 
+export interface OpencodeQuotaWindow {
+  percent: number
+  reset_in_sec: number
+  status?: string
+  reset_at?: string
+}
+
+export interface OpencodeQuotaResult {
+  rolling: OpencodeQuotaWindow
+  weekly: OpencodeQuotaWindow
+  monthly: OpencodeQuotaWindow
+  plan: string
+  source: string
+  fetched_at: string
+  extra: Record<string, unknown>
+}
+
+export async function queryOpencodeQuota(id: number): Promise<OpencodeQuotaResult> {
+  const { data } = await apiClient.get<OpencodeQuotaResult>(`/admin/accounts/${id}/opencode-quota`, {
+    timeout: 60000
+  })
+  return data
+}
+
 /**
  * Refresh account credentials
  * @param id - Account ID
@@ -994,6 +1018,7 @@ export const accountsAPI = {
   delete: deleteAccount,
   toggleStatus,
   testAccount,
+  queryOpencodeQuota,
   refreshCredentials,
   applyOAuthCredentials,
   getStats,

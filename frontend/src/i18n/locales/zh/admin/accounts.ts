@@ -423,6 +423,8 @@ export default {
         grokRetryAfter: '{time} 后重试',
         grokProbe: '探测',
         grokProbeTooltip: '发送最小 xAI Responses 探测请求并读取配额响应头',
+        opencodeProbe: '查询额度',
+        opencodeProbeTooltip: '调用 OpenCode 官方 /zen/go/v1/usage 查询 5H / 周 / 月额度',
         grokResetUnsupported: '不支持重置',
         grokResetUnsupportedTooltip: 'xAI 未向 Grok OAuth 账号开放重置额度接口',
         grokNoHeaders: '未观察到配额响应头',

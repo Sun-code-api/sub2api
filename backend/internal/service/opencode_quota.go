@@ -1,9 +1,8 @@
 package service
 
-// OpenCode Go 额度抓取：OpenCode Go 没有公开的 quota API，社区做法是抓取
-// 已认证的 workspace dashboard 页面（Next.js RSC payload）并解析嵌入的
-// rollingUsage / weeklyUsage / monthlyUsage 用量窗口。逻辑移植自
-// account-pool 的 opencode_client.py（PoC 验证过线上环境）。
+// OpenCode Go 额度：优先走官方 GET /zen/go/v1/usage（Bearer API key），
+// 返回 {usage: {rolling|weekly|monthly: {status, percent, resetsAt}}}。
+// Dashboard HTML 抓取仅作 fallback（补 plan，或 usage API 不可用时）。
 //
 // 抓取失败不阻塞测活主流程：调用方把错误当作"额度未知"处理。
 
@@ -17,21 +16,31 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+)
+
+const (
+	OpencodeQuotaSourceUsageAPI  = "usage_api"
+	OpencodeQuotaSourceDashboard = "dashboard"
 )
 
 // OpencodeQuotaWindow 是 OpenCode Go 的单个用量窗口（5 小时 / 周 / 月）。
 type OpencodeQuotaWindow struct {
 	Percent    float64 `json:"percent"`
 	ResetInSec int64   `json:"reset_in_sec"`
+	Status     string  `json:"status,omitempty"`
+	ResetAt    string  `json:"reset_at,omitempty"`
 }
 
 // OpencodeQuota 是 OpenCode Go 账号的额度快照。
 type OpencodeQuota struct {
-	Rolling  OpencodeQuotaWindow `json:"rolling"`
-	Weekly   OpencodeQuotaWindow `json:"weekly"`
-	Monthly  OpencodeQuotaWindow `json:"monthly"`
-	Plan     string              `json:"plan"`
-	FetchedAt time.Time          `json:"fetched_at"`
+	Rolling   OpencodeQuotaWindow `json:"rolling"`
+	Weekly    OpencodeQuotaWindow `json:"weekly"`
+	Monthly   OpencodeQuotaWindow `json:"monthly"`
+	Plan      string              `json:"plan"`
+	Source    string              `json:"source"`
+	FetchedAt time.Time           `json:"fetched_at"`
 }
 
 // opencodeGoDashboardUA 与网关测活请求保持一致。
@@ -39,6 +48,189 @@ const opencodeGoDashboardUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWe
 
 func opencodeWorkspaceDashboardURL(workspaceID string) string {
 	return fmt.Sprintf("https://opencode.ai/workspace/%s/go", workspaceID)
+}
+
+// opencodeUsageURLOverride is used by unit tests to point GET /usage at httptest.
+var opencodeUsageURLOverride string
+
+func opencodeUsageURL(baseURL string) string {
+	base := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if base == "" {
+		base = DefaultOpencodeBaseURL
+	}
+	return base + "/usage"
+}
+
+func parseOpencodeResetAt(raw string) (resetAt string, resetInSec int64) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", 0
+	}
+	var (
+		t   time.Time
+		err error
+	)
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
+		t, err = time.Parse(layout, raw)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		t, err = time.Parse("2006-01-02T15:04:05", strings.TrimSuffix(raw, "Z"))
+	}
+	if err != nil {
+		return raw, 0
+	}
+	sec := int64(time.Until(t).Seconds())
+	if sec < 0 {
+		sec = 0
+	}
+	return t.UTC().Format(time.RFC3339), sec
+}
+
+func usageWindowFromAPI(obj map[string]any) OpencodeQuotaWindow {
+	win := OpencodeQuotaWindow{}
+	if obj == nil {
+		return win
+	}
+	if v, ok := numberFromRSC(obj["percent"]); ok {
+		win.Percent = v
+	}
+	if s, ok := obj["status"].(string); ok {
+		win.Status = strings.TrimSpace(s)
+	}
+	if s, ok := obj["resetsAt"].(string); ok {
+		win.ResetAt, win.ResetInSec = parseOpencodeResetAt(s)
+	} else if s, ok := obj["resetAt"].(string); ok {
+		win.ResetAt, win.ResetInSec = parseOpencodeResetAt(s)
+	}
+	return win
+}
+
+func parseOpencodeUsagePayload(raw []byte) (*OpencodeQuota, error) {
+	var payload struct {
+		Usage map[string]map[string]any `json:"usage"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil, fmt.Errorf("decode usage payload: %w", err)
+	}
+	quota := &OpencodeQuota{
+		Source:    OpencodeQuotaSourceUsageAPI,
+		FetchedAt: time.Now(),
+	}
+	if payload.Usage != nil {
+		quota.Rolling = usageWindowFromAPI(payload.Usage["rolling"])
+		quota.Weekly = usageWindowFromAPI(payload.Usage["weekly"])
+		quota.Monthly = usageWindowFromAPI(payload.Usage["monthly"])
+	}
+	return quota, nil
+}
+
+func usageAPIErrorKind(statusCode int, body []byte) (plan string, message string) {
+	lower := strings.ToLower(string(body))
+	switch {
+	case strings.Contains(lower, "entitlementerror") || strings.Contains(lower, "go subscription required") || strings.Contains(lower, "no payment method"):
+		return "go_not_subscribed", fmt.Sprintf("OpenCode Go not subscribed (HTTP %d)", statusCode)
+	case strings.Contains(lower, "insufficient balance") || strings.Contains(lower, "creditserror"):
+		return "go_subscribed", fmt.Sprintf("OpenCode Go balance exhausted (HTTP %d)", statusCode)
+	case statusCode == http.StatusUnauthorized:
+		return "", fmt.Sprintf("API key rejected (HTTP %d)", statusCode)
+	default:
+		return "", fmt.Sprintf("usage API failed (HTTP %d)", statusCode)
+	}
+}
+
+// fetchOpencodeQuotaFromUsageAPI 用 API key 查询官方额度窗口。
+func fetchOpencodeQuotaFromUsageAPI(ctx context.Context, usageURL, apiKey string, timeout time.Duration) (*OpencodeQuota, error) {
+	if strings.TrimSpace(apiKey) == "" {
+		return nil, fmt.Errorf("missing api_key")
+	}
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, usageURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", opencodeGoDashboardUA)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusOK {
+		quota, err := parseOpencodeUsagePayload(raw)
+		if err != nil {
+			return nil, err
+		}
+		if quota.Plan == "" {
+			quota.Plan = "unknown"
+		}
+		return quota, nil
+	}
+
+	plan, msg := usageAPIErrorKind(resp.StatusCode, raw)
+	if plan != "" && resp.StatusCode != http.StatusUnauthorized {
+		quota := &OpencodeQuota{
+			Plan:      plan,
+			Source:    OpencodeQuotaSourceUsageAPI,
+			FetchedAt: time.Now(),
+		}
+		if plan == "go_subscribed" {
+			quota.Weekly = OpencodeQuotaWindow{Percent: 100, Status: "rate-limited"}
+		}
+		return quota, nil
+	}
+	return nil, fmt.Errorf("%s", msg)
+}
+
+// QueryOpencodeAccountQuota 查询账号当前 Go 额度并返回快照（不落库）。
+// 优先 usage API；cookie 可用时再抓 dashboard 补 plan。
+func QueryOpencodeAccountQuota(ctx context.Context, account *Account) (*OpencodeQuota, error) {
+	if account == nil || !account.IsOpencode() {
+		return nil, infraerrors.New(http.StatusBadRequest, "OPENCODE_QUOTA_INVALID_PLATFORM", "account is not an OpenCode account")
+	}
+	apiKey := account.GetOpencodeAPIKey()
+	if apiKey == "" {
+		return nil, infraerrors.New(http.StatusBadRequest, "OPENCODE_QUOTA_MISSING_API_KEY", "OpenCode API key is missing")
+	}
+
+	timeout := 30 * time.Second
+	usageURL := opencodeUsageURL(account.GetOpencodeBaseURL())
+	if opencodeUsageURLOverride != "" {
+		usageURL = opencodeUsageURLOverride
+	}
+	quota, usageErr := fetchOpencodeQuotaFromUsageAPI(ctx, usageURL, apiKey, timeout)
+
+	workspaceID := strings.TrimSpace(account.GetCredential("workspace_id"))
+	authCookie := strings.TrimSpace(account.GetCredential("auth_cookie"))
+	if usageErr != nil {
+		if workspaceID == "" || authCookie == "" {
+			return nil, infraerrors.New(http.StatusBadGateway, "OPENCODE_QUOTA_UPSTREAM_FAILED", usageErr.Error()).WithCause(usageErr)
+		}
+		dash, dashErr := fetchOpencodeQuota(ctx, workspaceID, authCookie, timeout)
+		if dashErr != nil {
+			return nil, infraerrors.New(http.StatusBadGateway, "OPENCODE_QUOTA_UPSTREAM_FAILED", usageErr.Error()).WithCause(usageErr)
+		}
+		return dash, nil
+	}
+
+	if workspaceID != "" && authCookie != "" && (quota.Plan == "" || quota.Plan == "unknown") {
+		if dash, dashErr := fetchOpencodeQuota(ctx, workspaceID, authCookie, timeout); dashErr == nil && dash.Plan != "" && dash.Plan != "unknown" {
+			quota.Plan = dash.Plan
+		}
+	}
+	return quota, nil
 }
 
 // fetchOpencodeQuota 抓取并解析 OpenCode Go workspace dashboard 的额度窗口。
@@ -84,6 +276,7 @@ func fetchOpencodeQuota(ctx context.Context, workspaceID, authCookie string, tim
 	}
 
 	quota := &OpencodeQuota{
+		Source:    OpencodeQuotaSourceDashboard,
 		FetchedAt: time.Now(),
 	}
 	if obj := extractRSCJSONObject(html, "rollingUsage"); obj != nil {
@@ -120,6 +313,9 @@ func rscUsageWindow(obj map[string]any) OpencodeQuotaWindow {
 		}
 	}
 	win := OpencodeQuotaWindow{}
+	if s, ok := obj["status"].(string); ok {
+		win.Status = strings.TrimSpace(s)
+	}
 	for _, k := range []string{"percent", "usagePercent", "usedPercent", "usage_pct", "pct"} {
 		if v, ok := numberFromRSC(obj[k]); ok {
 			win.Percent = v
@@ -132,13 +328,15 @@ func rscUsageWindow(obj map[string]any) OpencodeQuotaWindow {
 			break
 		}
 	}
-	if win.ResetInSec == 0 {
+	if win.ResetAt == "" {
 		for _, k := range []string{"resetAt", "resetsAt", "reset_at"} {
 			if s, ok := obj[k].(string); ok {
-				if t, err := time.Parse("2006-01-02T15:04:05", strings.TrimSuffix(s, "Z")); err == nil {
-					win.ResetInSec = int64(time.Until(t).Seconds())
-					break
+				resetAt, resetIn := parseOpencodeResetAt(s)
+				win.ResetAt = resetAt
+				if win.ResetInSec == 0 {
+					win.ResetInSec = resetIn
 				}
+				break
 			}
 		}
 	}
@@ -228,19 +426,30 @@ func unescapeRSC(s string) string {
 	return replacer.Replace(s)
 }
 
-// opencodeQuotaExtraUpdates 把额度快照转为 account.extra 的更新字段。
-func opencodeQuotaExtraUpdates(quota *OpencodeQuota) map[string]any {
+// OpencodeQuotaExtraUpdates 把额度快照转为 account.extra 的更新字段。
+func OpencodeQuotaExtraUpdates(quota *OpencodeQuota) map[string]any {
 	if quota == nil {
 		return nil
 	}
 	return map[string]any{
-		"opencode_plan":               quota.Plan,
-		"opencode_quota_5h_pct":       quota.Rolling.Percent,
-		"opencode_quota_5h_reset_in":  quota.Rolling.ResetInSec,
-		"opencode_quota_weekly_pct":   quota.Weekly.Percent,
-		"opencode_quota_weekly_reset_in": quota.Weekly.ResetInSec,
-		"opencode_quota_monthly_pct":  quota.Monthly.Percent,
+		"opencode_plan":                   quota.Plan,
+		"opencode_quota_source":           quota.Source,
+		"opencode_quota_5h_pct":           quota.Rolling.Percent,
+		"opencode_quota_5h_reset_in":      quota.Rolling.ResetInSec,
+		"opencode_quota_5h_reset_at":      quota.Rolling.ResetAt,
+		"opencode_quota_5h_status":        quota.Rolling.Status,
+		"opencode_quota_weekly_pct":       quota.Weekly.Percent,
+		"opencode_quota_weekly_reset_in":  quota.Weekly.ResetInSec,
+		"opencode_quota_weekly_reset_at":  quota.Weekly.ResetAt,
+		"opencode_quota_weekly_status":    quota.Weekly.Status,
+		"opencode_quota_monthly_pct":      quota.Monthly.Percent,
 		"opencode_quota_monthly_reset_in": quota.Monthly.ResetInSec,
-		"opencode_quota_refreshed_at": quota.FetchedAt.UTC().Format(time.RFC3339),
+		"opencode_quota_monthly_reset_at": quota.Monthly.ResetAt,
+		"opencode_quota_monthly_status":   quota.Monthly.Status,
+		"opencode_quota_refreshed_at":     quota.FetchedAt.UTC().Format(time.RFC3339),
 	}
+}
+
+func opencodeQuotaExtraUpdates(quota *OpencodeQuota) map[string]any {
+	return OpencodeQuotaExtraUpdates(quota)
 }

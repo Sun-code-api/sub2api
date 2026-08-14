@@ -325,7 +325,11 @@
               @account-updated="handleAccountUpdated"
               @usage-loaded="handleAccountUsageLoaded(row.id, $event)"
             />
-            <OpencodeQuotaBadge v-if="row.platform === 'opencode'" :account="row" />
+            <OpencodeQuotaBadge
+              v-if="row.platform === 'opencode'"
+              :account="row"
+              @account-updated="handleAccountUpdated"
+            />
           </template>
           <template #cell-proxy="{ row }">
             <div class="flex flex-col gap-1">
